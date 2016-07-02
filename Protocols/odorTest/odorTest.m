@@ -62,7 +62,7 @@ function odorTest
     S = initPhotometry(S);
     
     %%
-    portname = 'COM6';
+    portname = 'COM9';
     valveSlave = initValveSlave(portname);
 
     if isempty(valveSlave)
