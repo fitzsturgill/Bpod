@@ -4,7 +4,7 @@ global NidaqData_thisTrial
 switch action
     case 'ini'
 %% NIDAQ Initialization
-% Define parameters for analog inputs.
+%  Define parameters for analog inputs.
 nidaq.duration                 = 15;       % Arbitrary long
 nidaq.sample_rate              = 2000;     % 2khz aquisition
 nidaq.ai_channels              = {'ai0','ai1','ai2'};       % 3 channels
