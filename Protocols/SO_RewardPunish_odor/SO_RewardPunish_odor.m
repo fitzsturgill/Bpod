@@ -80,14 +80,41 @@ function SO_RewardPunish_odor
     S.nidaq.duration = S.PreCsRecording + S.GUI.OdorTime + S.GUI.Delay + S.PostUsRecording;
     S = initPhotometry(S);
     
-    %%
-    portname = 'COM9';
-    valveSlave = initValveSlave(portname);
-
+    %% Initialize olfactometer and point grey camera
+    % retrieve machine specific olfactometer settings
+    addpath(genpath(fullfile(BpodSystem.BpodPath, 'Settings Files'))); % Settings path is assumed to be shielded by gitignore file
+    olfSettings = machineSpecific_Olfactometer;
+    rmpath(genpath(fullfile(BpodSystem.BpodPath, 'Settings Files'))); % remove it just in case there would somehow be a name conflict
+    
+    % retrieve machine specific point grey camera settings
+    addpath(genpath(fullfile(BpodSystem.BpodPath, 'Settings Files'))); % Settings path is assumed to be shielded by gitignore file
+    pgSettings = machineSpecific_pointGrey;
+    rmpath(genpath(fullfile(BpodSystem.BpodPath, 'Settings Files'))); % remove it just in case there would somehow be a name conflict    
+    
+    % initialize olfactometer slave arduino
+    valveSlave = initValveSlave(olfSettings.portName);
     if isempty(valveSlave)
         BpodSystem.BeingUsed = 0;
         return
     end    
+    
+    % determine nidaq/point grey and olfactometer triggering arguments
+    npgWireArg = 0;
+    npgBNCArg = 1; % BNC 1 source to trigger Nidaq is hard coded
+    switch pgSettings.triggerType
+        case 'WireState'
+            npgWireArg = bitset(npgWireArg, pgSettings.triggerNumber); % its a wire trigger
+        case 'BNCState'
+            npgBNCArg = bitset(npgBNCArg, pgSettings.triggerNumber); % its a BNC trigger
+    end
+    olfWireArg = 0;
+    olfBNCArg = 0;
+    switch olfSettings.triggerType
+        case 'WireState'
+            olfWireArg = bitset(olfWireArg, olfSettings.triggerNumber);
+        case 'BNCState'
+            olfBNCArg = bitset(olfBNCArg, olfSettings.triggerNumber);
+    end
     
 
     
@@ -222,7 +249,6 @@ function SO_RewardPunish_odor
         S.ITI = inf;
         while S.ITI > 3 * S.GUI.mu_iti   % cap exponential distribution at 3 * expected mean value (1/rate constant (lambda))
             S.ITI = 1 + exprnd(S.GUI.mu_iti); % % kludge, added time to see if it fixes bonsai dropped frames
- 
         end
 
 
@@ -248,7 +274,7 @@ function SO_RewardPunish_odor
         sma = AddState(sma, 'Name', 'StartRecording', ...
             'Timer',0.025,...
             'StateChangeConditions', {'Tup', 'PreCsRecording'},...
-            'OutputActions',{'BNCState', 1, 'WireState', 2});         
+            'OutputActions', {'BNCState', npgBNCArg, 'WireState', npgWireArg});         
         sma = AddState(sma, 'Name','PreCsRecording',...
             'Timer',S.PreCsRecording,...
             'StateChangeConditions',{'Tup','DeliverStimulus'},...
@@ -262,7 +288,7 @@ function SO_RewardPunish_odor
         sma = AddState(sma, 'Name', 'Cue', ... 
             'Timer', S.GUI.OdorTime,...
             'StateChangeConditions', {'Tup','Delay'},...
-            'OutputActions', {'WireState', 1});
+            'OutputActions', {'WireState', olfWireArg, 'BNCState', olfBNCArg});
         sma = AddState(sma, 'Name', 'Delay', ... 
             'Timer', S.GUI.Delay,...
             'StateChangeConditions', {'Tup',Us{currentTrial}},...
