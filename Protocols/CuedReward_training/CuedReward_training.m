@@ -31,8 +31,8 @@ if isempty(fieldnames(S))  % If settings file was an empty struct, populate stru
     S.LowFreq = 4000;   %Hz
     S.HighFreq = 20000;  %Hz
     
-    S.Delay=0.2; %sec
-    S.Increment=0.002;
+    S.Delay=0.6; %sec
+    S.increment=0.002;
     
     S.Valve=1;                  %Valve port
     S.GUI.LargeReward=7.5;          %ul
@@ -96,7 +96,7 @@ for currentTrial = 1:S.MaxTrials
         S.ITI = exprnd(S.muITI);
     end
     
-    S.Delay=S.Delay+S.Increment
+    S.Delay=S.Delay+S.increment
     S = BpodParameterGUI('sync', S); % Sync parameters with BpodParameterGUI plugin
     
     %% Assemble State matrix
@@ -131,7 +131,7 @@ for currentTrial = 1:S.MaxTrials
 
     sma = AddState(sma,'Name', 'NoLick', ...
         'Timer', S.TimeNoLick,...
-        'StateChangeConditions', {'Tup', 'PostlightExit','Port2In','RestartNoLick'},...
+        'StateChangeConditions', {'Tup', 'PostlightExit','Port1In','RestartNoLick'},...
         'OutputActions', {'PWM1', 255});  
     sma = AddState(sma,'Name', 'RestartNoLick', ...
         'Timer', 0,...
