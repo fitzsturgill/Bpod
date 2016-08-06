@@ -8,7 +8,7 @@ function AudOddball
 %"ScaledRewardStates"   : scale the reward according to time of lick
 
 %"Online_LickPlot"      : initialize and update online lick and outcome plot
-%"Online_LickEvents"    : extract the data for the online lick plot
+%"Online_LickEvents"   : extract the data for the online lick plot
 %"Online_NidaqPlot"     : initialize and update online nidaq plot
 %"Online_NidaqEvents"   : extract the data for the online nidaq plot
 
@@ -24,8 +24,8 @@ if isempty(fieldnames(S))  % If settings file was an empty struct, populate stru
     S.NumBlocks = 10;
     S.TrialPerBlock = 100;
     S.MinTonesBetweenOddballs = 6;
-    S.SoundDuration = 0.1;
-    S.ISI = 0.5;
+    S.SoundDuration = 0.2;
+    S.ISI = 0.8;
     S.OddballProb = 0.1;
     S.BlockBreak = 5;
     
@@ -34,7 +34,7 @@ if isempty(fieldnames(S))  % If settings file was an empty struct, populate stru
 
 end
 % Initialize parameter GUI plugin
-BpodParameterGUI('init', S);
+%BpodParameterGUI('init', S);
 
 %% Define stimuli and send to sound server
 
@@ -71,37 +71,50 @@ end
 
 %% Define trial types parameters, trial sequence for each block and Initialize plots
 
-TrialsSequences = zeros(S.TrialPerBlock,S.NumBlocks);
+TrialsSequences = zeros(S.NumBlocks,S.TrialPerBlock);
 
 for i = 1:S.NumBlocks
-    thistrialsequence = zeros(S.TrialPerBlock,1);
+    thistrialsequence = zeros(1,S.TrialPerBlock);
     if BlockSeq(i)
         DevSound = 1;
         NonDevSound = 2;
-        thistrialsequence(1:round(S.TrialPerBlock*S.OddballProb)) = DevSound;
-        thistrialsequence(round(S.TrialPerBlock*S.OddballProb)+1:end) = NonDevSound;
-        spacingcheck = 0;
-        
-        while ~spacingcheck
-            thistrialsequence = thistrialsequence(randperm(length(thistrialsequence)));
-            
-            for j = 1:length(thistrialsequence)
-                if thistrialsequence(j) = DevSound
-                    count = 1
-                
-        
-        
-        
-        
-        
-        
-        
+    else
+        DevSound = 2;
+        NonDevSound = 1;
+    end
     
+    thistrialsequence(1:round(S.TrialPerBlock*S.OddballProb)) = DevSound;
+    thistrialsequence(round(S.TrialPerBlock*S.OddballProb)+1:end) = NonDevSound;
+    spacingcheck = 0;
+        
+    while ~spacingcheck
+        thistrialsequence = thistrialsequence(randperm(length(thistrialsequence)));
+        count = 0;
+        counts = [];
+        numbad = 0;
+        for j = 1:length(thistrialsequence)
+            if thistrialsequence(j) == DevSound
+                counts(size(counts)+1) = count;
+                if count < 6
+                    numbad = numbad + 1;
+                end
+                count = 0;             
+            else
+                count = count +1;
+            end
+        end
+    
+        if numbad == 0
+            spacingcheck = 1;
+        end
+    
+    end
 
-    
-[S.TrialsNames, S.TrialsMatrix]=CuedReward_Phase(S);
-TrialSequence=WeightedRandomTrials(S.TrialsMatrix(:,2)', S.MaxTrials);
-FigLick=Online_LickPlot('ini',TrialSequence,S.TrialsMatrix,S.TrialsNames,S.Phase);
+    TrialSequences(i,:) = thistrialsequence
+end
+
+   
+%FigLick=Online_LickPlot('ini',TrialSequence,S.TrialsMatrix,S.TrialsNames,S.Phase);
 % FigNidaq=Online_NidaqPlot('ini',S.TrialsNames,S.Phase);
 
 BpodSystem.Data.TrialTypes = []; % The trial type of each trial completed will be added here.
@@ -115,98 +128,53 @@ BpodSystem.Data.TrialTypes = []; % The trial type of each trial completed will b
 %     lh{2} = nidaq.session.addlistener('DataRequired', @(src,event) src.queueOutputData(nidaq.ao_data));
 
 %% Main trial loop
-for currentTrial = 1:S.MaxTrials
-    %Initialize cuurent trial parameters
-    for TrialType=1:S.GUI.NumTrialTypes
-        if TrialSequence(currentTrial)==TrialType
-            S.Sound=S.TrialsMatrix(TrialType,3);
-            S.Delay=S.TrialsMatrix(TrialType,4);
-            S.Valve=S.TrialsMatrix(TrialType,5);
-            S.Reward=S.TrialsMatrix(TrialType,8);
+
+for currentBlock = 1:S.NumBlocks
+    for currentTrial = 1:S.TrialPerBlock
+
+        %Initialize current trial parameters
+        S.Sound = TrialSequences(currentBlock,currentTrial);
+        %% Assemble State matrix
+        sma = NewStateMatrix;
+        %Stimulus delivery
+        sma=AddState(sma,'Name', 'SoundDelivery',...
+            'Timer',S.SoundDuration,...
+            'StateChangeConditions',{'Tup', 'ISI'},...
+            'OutputActions', {'SoftCode',S.Sound});
+     
+      sma = AddState(sma,'Name', 'ISI',...
+            'Timer',S.ISI,...
+            'StateChangeConditions', {'Tup', 'exit'},...
+            'OutputActions',{});
+        SendStateMatrix(sma);
+
+    %% NIDAQ Get nidaq ready to start
+    %      nidaq=Nidaq_photometryA('WaitToStart',nidaq);
+
+         RawEvents = RunStateMatrix;
+
+    %% NIDAQ Stop acquisition and save data in bpod structure
+    %     nidaq=Nidaq_photometryA('Stop',nidaq);
+    %     BpodSystem.Data.NidaqData{currentTrial} = NidaqData_thisTrial;
+
+        %% Save
+        %if ~isempty(fieldnames(RawEvents))                                          % If trial data was returned
+         %   BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents);            % Computes trial events from raw data
+          %  BpodSystem.Data.TrialSettings(currentTrial) = S;                        % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
+           % BpodSystem.Data.TrialTypes(currentTrial) = TrialSequence(currentTrial); % Adds the trial type of the current trial to data
+            %SaveBpodSessionData;                                                    % Saves the field BpodSystem.Data to the current data file
+        %end
+
+        %% PLOT - extract events from BpodSystem.data and update figures
+      %  [currentOutcome, currentLickEvents]=Online_LickEvents(S.TrialsMatrix,currentTrial,TrialSequence(currentTrial),'PostReward');
+       % FigLick=Online_LickPlot('update',[],[],[],[],FigLick,currentTrial,currentOutcome,TrialSequence(currentTrial),currentLickEvents);
+    %     currentNidaq=Online_NidaqEvents(currentTrial,'PostReward',7);
+    %     FigNidaq=Online_NidaqPlot('update',[],[],FigNidaq,currentNidaq,TrialSequence(currentTrial));
+
+        HandlePauseCondition; % Checks to see if the protocol is paused. If so, waits until user resumes.
+        if BpodSystem.BeingUsed == 0
+            return
         end
-    end
-    S.ITI = 100;
-    while S.ITI > 3 * S.muITI
-        S.ITI = exprnd(S.muITI);
-    end
 
-    S = BpodParameterGUI('sync', S); % Sync parameters with BpodParameterGUI plugin
-    
-    %% Assemble State matrix
-    sma = NewStateMatrix();
-    %Pre task states
-    sma = AddState(sma, 'Name','PreState',...
-        'Timer',S.PreTime,...
-        'StateChangeConditions',{'Tup','SoundDelivery'},...
-        'OutputActions',{});
-    %Stimulus delivery
-    sma=AddState(sma,'Name', 'SoundDelivery',...
-        'Timer',S.SoundDuration,...
-        'StateChangeConditions',{'Tup', 'Delay'},...
-        'OutputActions', {'SoftCode',S.Sound});
-    %Delay
-    sma=AddState(sma,'Name', 'Delay',...
-        'Timer',S.Delay,...
-        'StateChangeConditions', {'Tup', 'Outcome'},...
-        'OutputActions', {});
-    %Reward
-    sma=AddState(sma,'Name', 'Outcome',...
-        'Timer',S.Reward,...
-        'StateChangeConditions', {'Tup', 'PostReward'},...
-        'OutputActions', {'ValveState', S.Valve});
-    
-    %Post task states
-    sma=AddState(sma,'Name', 'PostReward',...
-        'Timer',S.PostTime,...
-        'StateChangeConditions',{'Tup', 'NoLick'},...
-        'OutputActions',{});
-    %ITI + noLick period
-
-    sma = AddState(sma,'Name', 'NoLick', ...
-        'Timer', S.TimeNoLick,...
-        'StateChangeConditions', {'Tup', 'PostlightExit','Port2In','RestartNoLick'},...
-        'OutputActions', {'PWM2', 255});  
-    sma = AddState(sma,'Name', 'RestartNoLick', ...
-        'Timer', 0,...
-        'StateChangeConditions', {'Tup', 'NoLick',},...
-        'OutputActions', {'PWM2', 255}); 
-    sma = AddState(sma,'Name', 'PostlightExit', ...
-        'Timer', 0.5,...
-        'StateChangeConditions', {'Tup', 'ITI',},...
-        'OutputActions', {});
-  sma = AddState(sma,'Name', 'ITI',...
-        'Timer',S.ITI,...
-        'StateChangeConditions', {'Tup', 'exit'},...
-        'OutputActions',{});
-    SendStateMatrix(sma);
- 
-%% NIDAQ Get nidaq ready to start
-%      nidaq=Nidaq_photometryA('WaitToStart',nidaq);
-       
-     RawEvents = RunStateMatrix;
-    
-%% NIDAQ Stop acquisition and save data in bpod structure
-%     nidaq=Nidaq_photometryA('Stop',nidaq);
-%     BpodSystem.Data.NidaqData{currentTrial} = NidaqData_thisTrial;
-    
-    %% Save
-    if ~isempty(fieldnames(RawEvents))                                          % If trial data was returned
-        BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents);            % Computes trial events from raw data
-        BpodSystem.Data.TrialSettings(currentTrial) = S;                        % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
-        BpodSystem.Data.TrialTypes(currentTrial) = TrialSequence(currentTrial); % Adds the trial type of the current trial to data
-        SaveBpodSessionData;                                                    % Saves the field BpodSystem.Data to the current data file
-    end
-    
-    %% PLOT - extract events from BpodSystem.data and update figures
-    [currentOutcome, currentLickEvents]=Online_LickEvents(S.TrialsMatrix,currentTrial,TrialSequence(currentTrial),'PostReward');
-    FigLick=Online_LickPlot('update',[],[],[],[],FigLick,currentTrial,currentOutcome,TrialSequence(currentTrial),currentLickEvents);
-%     currentNidaq=Online_NidaqEvents(currentTrial,'PostReward',7);
-%     FigNidaq=Online_NidaqPlot('update',[],[],FigNidaq,currentNidaq,TrialSequence(currentTrial));
-    
-    HandlePauseCondition; % Checks to see if the protocol is paused. If so, waits until user resumes.
-    if BpodSystem.BeingUsed == 0
-        return
-    end
-    
 end
 end

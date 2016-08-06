@@ -19,8 +19,8 @@ global BpodSystem NidaqData_thisTrial
 S = BpodSystem.ProtocolSettings; % Load settings chosen in launch manager into current workspace as a struct called S
 
 if isempty(fieldnames(S))  % If settings file was an empty struct, populate struct with default settings
-    S.Phase='Pavlovian1Cue';
-    S.MaxTrials=500;
+    S.Phase='Pavlovian2Cues';
+    S.MaxTrials=200;
     S.GUI.NumTrialTypes = 6;    %Need to modify the TrialMatrix and TrialPlot according to
     S.TimeNoLick=2;             %sec
     S.muITI=2;                  %sec
@@ -33,7 +33,7 @@ if isempty(fieldnames(S))  % If settings file was an empty struct, populate stru
     S.LowFreq = 4000;   %Hz
     S.HighFreq = 20000;  %Hz
     
-    S.Valve=2;                  %Valve port
+    S.Valve=1;                  %Valve port
     S.GUI.LargeReward=7.5;          %ul
     S.GUI.SmallReward=2;          %ul
     S.GUI.UncuedReward=2;     %ul
@@ -130,11 +130,11 @@ for currentTrial = 1:S.MaxTrials
     sma = AddState(sma,'Name', 'NoLick', ...
         'Timer', S.TimeNoLick,...
         'StateChangeConditions', {'Tup', 'PostlightExit','Port2In','RestartNoLick'},...
-        'OutputActions', {'PWM2', 255});  
+        'OutputActions', {'PWM1', 255});  
     sma = AddState(sma,'Name', 'RestartNoLick', ...
         'Timer', 0,...
         'StateChangeConditions', {'Tup', 'NoLick',},...
-        'OutputActions', {'PWM2', 255}); 
+        'OutputActions', {'PWM1', 255}); 
     sma = AddState(sma,'Name', 'PostlightExit', ...
         'Timer', 0.5,...
         'StateChangeConditions', {'Tup', 'ITI',},...

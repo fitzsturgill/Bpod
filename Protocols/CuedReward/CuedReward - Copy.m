@@ -12,7 +12,7 @@ function CuedReward
 %"Online_NidaqPlot"     : initialize and update online nidaq plot
 %"Online_NidaqEvents"   : extract the data for the online nidaq plot
 
-global BpodSystem NidaqData_thisTrial
+global BpodSystem nidaq
 
 %% Define parameters
 
@@ -43,6 +43,9 @@ if isempty(fieldnames(S))  % If settings file was an empty struct, populate stru
     S.SmallRew  =   GetValveTimes(S.GUI.SmallReward, S.Valve);
     S.UncuedRew =   GetValveTimes(S.GUI.UncuedReward, S.Valve);
     
+	S.GUI.LED1_amp = 1.5;
+	S.GUI.LED2_amp = 0;
+    
 end
 % Initialize parameter GUI plugin
 BpodParameterGUI('init', S);
@@ -71,13 +74,10 @@ FigLick=Online_LickPlot('ini',TrialSequence,S.TrialsMatrix,S.TrialsNames,S.Phase
 
 BpodSystem.Data.TrialTypes = []; % The trial type of each trial completed will be added here.
 
-% NIDAQ Initialization
-%     nidaq=Nidaq_photometryA('ini');
-%         function processNidaqData(src,event)
-%             NidaqData_thisTrial = [NidaqData_thisTrial;event.Data];
-%         end
-%     lh{1} = nidaq.session.addlistener('DataAvailable',@processNidaqData);
-%     lh{2} = nidaq.session.addlistener('DataRequired', @(src,event) src.queueOutputData(nidaq.ao_data));
+%% Nidaq
+    S.nidaq.duration = S.PreTime + S.SoundDuration + S.Delay + S.PostTime;
+    S = initPhotometry(S);
+
 
 %% Main trial loop
 for currentTrial = 1:S.MaxTrials
@@ -145,16 +145,29 @@ for currentTrial = 1:S.MaxTrials
         'OutputActions',{});
     SendStateMatrix(sma);
  
-%% NIDAQ Get nidaq ready to start
-%      nidaq=Nidaq_photometryA('WaitToStart',nidaq);
+%% NIDAQ     
+        updateLEDData(S);
+        nidaq.ai_data = [];
+        nidaq.session.prepare();
+        nidaq.session.startBackground();
        
      RawEvents = RunStateMatrix;
     
-%% NIDAQ Stop acquisition and save data in bpod structure
-%     nidaq=Nidaq_photometryA('Stop',nidaq);
-%     BpodSystem.Data.NidaqData{currentTrial} = NidaqData_thisTrial;
+%% NIDAQ
+        pause(0.05); 
+        nidaq.session.stop() % Kills ~0.002 seconds after state matrix is done.
+        wait(nidaq.session) % Tring to wait until session is done - did we record the full session?
+        % demodulate and plot trial data
+        try
+            updatePhotometryPlot;
+        catch
+        end   
+        nidaq.session.outputSingleScan(zeros(1,length(nidaq.aoChannels)));
+        BpodSystem.Data.NidaqData{currentTrial, 1} = nidaq.ai_data; %input data
+        BpodSystem.Data.NidaqData{currentTrial, 2} = nidaq.ao_data; % output data
     
-    %% Save
+
+%% Save
     if ~isempty(fieldnames(RawEvents))                                          % If trial data was returned
         BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents);            % Computes trial events from raw data
         BpodSystem.Data.TrialSettings(currentTrial) = S;                        % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
