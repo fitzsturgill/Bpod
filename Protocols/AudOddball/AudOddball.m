@@ -114,7 +114,7 @@ for i = 1:S.NumBlocks
 end
 
    
-%FigLick=Online_LickPlot('ini',TrialSequence,S.TrialsMatrix,S.TrialsNames,S.Phase);
+FigLick=Online_LickPlot('ini',TrialSequence,S.TrialsMatrix,S.TrialsNames,S.Phase);
 % FigNidaq=Online_NidaqPlot('ini',S.TrialsNames,S.Phase);
 
 BpodSystem.Data.TrialTypes = []; % The trial type of each trial completed will be added here.
