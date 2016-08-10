@@ -1,25 +1,33 @@
        
 function S = initPhotometry(S)
     %% NIDAQ :: Set up NIDAQ data aquisision
-    global nidaq
+    global nidaq BpodSystem
 
     daq.reset;
     
-    % defaults
-    phDefaults = {...
-        'TriggerConnection', 1;...
-        'LED1_f', 211;...
-        'LED2_f', 531;...
-        'duration', 6;...
-        'sample_rate', 6100;...
-        'ai_channelNames', {'ai0','ai1','ai2'};...
-        'ao_channelNames', {'ao0', 'ao1'};...
-        };
-    % defaults linked to Bpod parameter GUI
-    phGUIDefaults = {...
-        'LED1_amp', 1.5;...
-        'LED2_amp', 5;...
-        };
+    % retrieve machine specific settings
+    addpath(genpath(fullfile(BpodSystem.BpodPath, 'Settings Files'))); % Settings path is assumed to be shielded by gitignore file
+    phSettings = machineSpecific_Photometry;
+    rmpath(genpath(fullfile(BpodSystem.BpodPath, 'Settings Files'))); % remove it just in case there would somehow be a name conflict
+    
+%     % defaults
+%     phDefaults = {...
+%         'TriggerConnection', 1;...
+%         'LED1_f', 211;...
+%         'LED2_f', 531;...
+%         'duration', 6;...
+%         'sample_rate', 6100;...
+%         'ai_channelNames', {'ai0','ai1','ai2'};...
+%         'ao_channelNames', {'ao0', 'ao1'};...
+%         };
+%     % defaults linked to Bpod parameter GUI
+%     phGUIDefaults = {...
+%         'LED1_amp', 1.5;...
+%         'LED2_amp', 5;...
+%         };
+    phDefaults = phSettings.phDefaults;
+    phGUIDefaults = phSettings.phGUIDefaults;
+
     
 %     set defaults
     for counter = 1:size(phDefaults, 1)
@@ -59,20 +67,20 @@ function S = initPhotometry(S)
     %add inputs
     counter = 1;
     for ch = nidaq.ai_channelNames
-        nidaq.aiChannels{counter} = addAnalogInputChannel(nidaq.session,'Dev1',ch,'Voltage');
+        nidaq.aiChannels{counter} = addAnalogInputChannel(nidaq.session,S.nidaq.Device,ch,'Voltage');
         nidaq.aiChannels{counter}.TerminalConfig = 'SingleEnded';
         counter = counter + 1;
     end
     % add outputs
     counter = 1;
     for ch = nidaq.ao_channelNames
-        nidaq.aoChannels{counter} = nidaq.session.addAnalogOutputChannel('Dev1',ch, 'Voltage');
+        nidaq.aoChannels{counter} = nidaq.session.addAnalogOutputChannel(S.nidaq.Device,ch, 'Voltage');
         counter = counter + 1;
     end
 
     % add trigger external trigger, if specified
     if S.nidaq.TriggerConnection
-        addTriggerConnection(nidaq.session, 'external', 'DEV1/PFI0', 'StartTrigger');
+        addTriggerConnection(nidaq.session, 'external', [S.nidaq.Device '/' S.nidaq.TriggerSource], 'StartTrigger');
         nidaq.session.ExternalTriggerTimeout = 60;
     end
     

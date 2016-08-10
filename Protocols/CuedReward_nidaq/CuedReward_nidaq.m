@@ -44,7 +44,7 @@ if isempty(fieldnames(S))  % If settings file was an empty struct, populate stru
     S.UncuedRew =   GetValveTimes(S.GUI.UncuedReward, S.Valve);
     
 	S.GUI.LED1_amp = 1.5;
-	S.GUI.LED2_amp = 0;
+	S.GUI.LED2_amp = 1.5;
     
 end
 % Initialize parameter GUI plugin
@@ -71,6 +71,13 @@ BpodSystem.SoftCodeHandlerFunction = 'SoftCodeHandler_PlaySound';
 TrialSequence=WeightedRandomTrials(S.TrialsMatrix(:,2)', S.MaxTrials);
 FigLick=Online_LickPlot('ini',TrialSequence,S.TrialsMatrix,S.TrialsNames,S.Phase);
 % FigNidaq=Online_NidaqPlot('ini',S.TrialsNames,S.Phase);
+%% Init Plots
+    scrsz = get(groot,'ScreenSize'); 
+    
+    BpodSystem.ProtocolFigures.NIDAQFig       = figure(...
+        'Position', [25 scrsz(4)*2/3-100 scrsz(3)/2-50  scrsz(4)/3],'Name','NIDAQ plot','numbertitle','off');
+    BpodSystem.ProtocolFigures.NIDAQPanel1     = subplot(2,1,1);
+    BpodSystem.ProtocolFigures.NIDAQPanel2     = subplot(2,1,2);
 
 BpodSystem.Data.TrialTypes = []; % The trial type of each trial completed will be added here.
 
@@ -100,6 +107,10 @@ for currentTrial = 1:S.MaxTrials
     %% Assemble State matrix
     sma = NewStateMatrix();
     %Pre task states
+     sma = AddState(sma, 'Name', 'StartRecording', ...
+            'Timer', 0.025,...
+            'StateChangeConditions', {'Tup', 'PreState'},...
+            'OutputActions', {'BNCState',1}); 
     sma = AddState(sma, 'Name','PreState',...
         'Timer',S.PreTime,...
         'StateChangeConditions',{'Tup','SoundDelivery'},...
@@ -163,6 +174,7 @@ for currentTrial = 1:S.MaxTrials
         catch
         end   
         nidaq.session.outputSingleScan(zeros(1,length(nidaq.aoChannels)));
+       
         BpodSystem.Data.NidaqData{currentTrial, 1} = nidaq.ai_data; %input data
         BpodSystem.Data.NidaqData{currentTrial, 2} = nidaq.ao_data; % output data
     
@@ -178,8 +190,8 @@ for currentTrial = 1:S.MaxTrials
     %% PLOT - extract events from BpodSystem.data and update figures
     [currentOutcome, currentLickEvents]=Online_LickEvents(S.TrialsMatrix,currentTrial,TrialSequence(currentTrial),'PostReward');
     FigLick=Online_LickPlot('update',[],[],[],[],FigLick,currentTrial,currentOutcome,TrialSequence(currentTrial),currentLickEvents);
-%     currentNidaq=Online_NidaqEvents(currentTrial,'PostReward',7);
-%     FigNidaq=Online_NidaqPlot('update',[],[],FigNidaq,currentNidaq,TrialSequence(currentTrial));
+     currentNidaq=Online_NidaqEvents(currentTrial,'PostReward',7);
+    % FigNidaq=Online_NidaqPlot('update',[],[],FigNidaq,currentNidaq,TrialSequence(currentTrial));
     
     HandlePauseCondition; % Checks to see if the protocol is paused. If so, waits until user resumes.
     if BpodSystem.BeingUsed == 0
