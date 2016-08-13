@@ -10,7 +10,7 @@ t = 0:dt:Duration;
 SineWave=sin(2*pi*Frequency*t);
 
 if RampDuration
-    rampSamples = round(rampDuration / dt);
+    rampSamples = round(RampDuration / dt);
     slope = 1/rampSamples;
     rampData = 1:rampSamples;
     rampData = slope * rampData;

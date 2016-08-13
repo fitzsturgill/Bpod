@@ -19,4 +19,5 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 %}
 function SaveBpodProtocolSettings
 global BpodSystem
-save(BpodSystem.SettingsPath, 'BpodSystem.ProtocolSettings');
+ProtocolSettings = BpodSystem.ProtocolSettings;
+save(BpodSystem.SettingsPath, 'ProtocolSettings');

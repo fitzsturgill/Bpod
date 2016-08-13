@@ -61,7 +61,7 @@ function CuedOutcome_odor_complete
         S.ToneFreq = 10000; % frequency of neutral tone signaling onset of U.S.
         S.ToneDuration = 0.1; % duration of neutral tone
     end
-    
+    MaxTrials = 1000;
     %% Pause and wait for user to edit parameter GUI 
     BpodParameterGUI('init', S);    
     BpodSystem.Pause = 1;
@@ -69,7 +69,6 @@ function CuedOutcome_odor_complete
     S = BpodParameterGUI('sync', S); % Sync parameters with BpodParameterGUI plugin
     BpodSystem.ProtocolSettings = S; % copy settings back prior to saving
     SaveBpodProtocolSettings;
-
 
 
     %% Initialize NIDAQ
@@ -135,6 +134,13 @@ function CuedOutcome_odor_complete
     UsOutcomes = [];  % remember! these can't be left as zeros because they are used as indexes by processAnalysis_Photometry
     Us = {};
     Cs = []; % zeros for uncued
+    % initialize BpodSystem.Data fields
+    BpodSystem.Data.TrialTypes = [];
+    BpodSystem.Data.TrialOutcome = [];
+    BpodSystem.Data.OdorValve = [];
+    BpodSystem.Data.Epoch = [];
+    BpodSystem.Data.Cs = [];
+    BpodSystem.Data.Us = {};
 
 
     %% init outcome plot
@@ -146,7 +152,6 @@ function CuedOutcome_odor_complete
     set(outcomeFig, 'Position', [25 scrsz(4)/2-150 scrsz(3)-50  scrsz(4)/6],'numbertitle','off', 'MenuBar', 'none'); %, 'Resize', 'off');    
     outcomeAxes = axes('Parent', outcomeFig);
 %     placeHolder = line([1 1], [min(unique(TrialTypes)) max(unique(TrialTypes))], 'Color', [0.8 0.8 0.8], 'LineWidth', 4, 'Parent', outcomeAxes);    
-    hold on;
     outcomesHandle = scatter([], []);
     outcomeSpan = 20;
 %     set(outcomeAxes, 'XLim', [0 outcomeSpan]);
@@ -230,7 +235,7 @@ function CuedOutcome_odor_complete
         
         % update outcome plot to reflect currently executed trial
         set(outcomeAxes, 'XLim', [max(0, currentTrial - outcomeSpan), currentTrial]);
-        set(placeHolder, 'XData', [currentTrial currentTrial]);   
+%         set(placeHolder, 'XData', [currentTrial currentTrial]);   
         
         % update odor valve number for current trial
         slaveResponse = updateValveSlave(valveSlave, Cs(end)); %Cs == odor valve
@@ -275,7 +280,7 @@ function CuedOutcome_odor_complete
             'OutputActions', {'BNCState', npgBNCArg, 'WireState', npgWireArg});         
         sma = AddState(sma, 'Name','PreCsRecording',...
             'Timer',S.PreCsRecording,...
-            'StateChangeConditions',{'Tup','DeliverStimulus'},...
+            'StateChangeConditions',{'Tup','Cue'},...
             'OutputActions',{});
         sma = AddState(sma, 'Name', 'Cue', ... 
             'Timer', S.GUI.OdorTime,...
@@ -283,7 +288,7 @@ function CuedOutcome_odor_complete
             'OutputActions', {'WireState', olfWireArg, 'BNCState', olfBNCArg});
         sma = AddState(sma, 'Name', 'Delay', ... 
             'Timer', S.GUI.Delay,...
-            'StateChangeConditions', {'Tup', Us{currentTrial}},...
+            'StateChangeConditions', {'Tup', 'Us'},...
             'OutputActions', {});         
         sma = AddState(sma,'Name', 'Us', ...
             'Timer',UsTime,... % time will be 0 for omission
@@ -326,10 +331,11 @@ function CuedOutcome_odor_complete
         if ~isempty(fieldnames(RawEvents)) % If trial data was returned
             BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
             BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
-            BpodSystem.Data.TrialTypes(currentTrial) = TrialTypes(currentTrial); % Adds the trial type of the current trial to data
-            BpodSystem.Data.TrialOutcome(currentTrial) = UsOutcomes(currentTrial);
-            BpodSystem.Data.OdorValve(currentTrial) =  odorValve;
-            BpodSystem.Data.Epoch(currentTrial) = S.GUI.Epoch;
+            BpodSystem.Data.TrialTypes(end + 1) = TrialType; % Adds the trial type of the current trial to data
+            BpodSystem.Data.TrialOutcome(end + 1) = UsOutcomes(currentTrial);
+            BpodSystem.Data.OdorValve(end + 1) =  odorValve;
+            BpodSystem.Data.Epoch(end + 1) = S.GUI.Epoch;
+            BpodSystem.Data.Us
             try
                 BpodSystem.Data.Us(currentTrial) = Us{currentTrial}; % fluff, nice to have the strings for 'reward', 'punish', 'omit'
             catch
@@ -356,11 +362,3 @@ function CuedOutcome_odor_complete
         end 
     end
 end
-
-function SoftCodeHandler_PlaySound(SoundID)
-    if SoundID == 255
-        PsychToolboxSoundServer('StopAll');
-    else
-        PsychToolboxSoundServer('Play', SoundID);
-    end
-end   

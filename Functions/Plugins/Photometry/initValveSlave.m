@@ -13,7 +13,12 @@ function SO = initValveSlave(portname)
     
     set(SO, 'OutputBufferSize', 8000);
     set(SO, 'InputBufferSize', 50000);
-    fopen(SO);
+    try
+        fopen(SO);
+    catch
+        fclose(instrfind);
+        fopen(SO);
+    end
     fwrite(SO, char(50));
     pause(.1); % wait for arduino to talk back
                                                         %     tic;
