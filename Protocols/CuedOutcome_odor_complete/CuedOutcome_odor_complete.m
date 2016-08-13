@@ -130,16 +130,17 @@ function CuedOutcome_odor_complete
     BpodSystem.ProtocolFigures.NIDAQPanel2     = subplot(2,1,2);
 
     %% initialize trial types and outcomes
-    TrialTypes = [];
-    UsOutcomes = [];  % remember! these can't be left as zeros because they are used as indexes by processAnalysis_Photometry
+    TrialType = [];
+    TrialOutcome = [];  % remember! these can't be left as zeros because they are used as indexes by processAnalysis_Photometry
+    OdorValve = [];
     Us = {};
-    Cs = []; % zeros for uncued
+    Cs = {};
     % initialize BpodSystem.Data fields
     BpodSystem.Data.TrialTypes = [];
     BpodSystem.Data.TrialOutcome = [];
     BpodSystem.Data.OdorValve = [];
     BpodSystem.Data.Epoch = [];
-    BpodSystem.Data.Cs = [];
+    BpodSystem.Data.Cs = {};
     BpodSystem.Data.Us = {};
 
 
@@ -208,29 +209,32 @@ function CuedOutcome_odor_complete
 
         % determine outcomes
         if ismember(TrialType, [1 4 7])
-            UsOutcomes(currentTrial) = 1; % reward
-            Us{currentTrial} = 'Reward';
+            TrialOutcome = 1; % reward
+            Us = 'Reward';
             UsAction = {'ValveState', S.RewardValveCode, 'SoftCode', 1};
             UsTime = S.RewardValveTime;
         elseif ismember(TrialType, [2 5 8])
-            UsOutcomes(currentTrial) = 2; % punish
-            Us{currentTrial} = 'Punish';    
+            TrialOutcome = 2; % punish
+            Us = 'Punish';    
             UsAction = {'ValveState', S.PunishValveCode, 'SoftCode', 1};
             UsTime = S.GUI.PunishValveTime;
         else % implicitly TrialType must be one of [3 6 9] 
-            UsOutcomes(currentTrial) = 3; % omit
-            Us{currentTrial} = 'Omit';        
+            TrialOutcome = 3; % omit
+            Us = 'Omit';        
             UsAction = {'SoftCode', 1};
             UsTime = (S.RewardValveTime + S.GUI.PunishValveTime)/2; % split the difference, both should be very short            
         end
 
         % determine cue
         if ismember(TrialTypes, [1 2 3])
-            Cs(currentTrial) = S.GUI.highValueOdorValve;
+            OdorValve = S.GUI.highValueOdorValve;
+            Cs = 'highValue';
         elseif ismember(TrialTypes, [4 5 6])
-            Cs(currentTrial) = S.GUI.lowValueOdorValve;        
+            OdorValve = S.GUI.lowValueOdorValve;        
+            Cs = 'lowValue';
         else
-            Cs(currentTrial) = 0; % no odor cue
+            OdorValve = 0; % no odor cue
+            Cs = 'uncued';
         end    
         
         % update outcome plot to reflect currently executed trial
@@ -238,7 +242,7 @@ function CuedOutcome_odor_complete
 %         set(placeHolder, 'XData', [currentTrial currentTrial]);   
         
         % update odor valve number for current trial
-        slaveResponse = updateValveSlave(valveSlave, Cs(end)); %Cs == odor valve
+        slaveResponse = updateValveSlave(valveSlave, OdorValve); 
         S.currentValve = slaveResponse;
         if isempty(slaveResponse);
             disp(['*** Valve Code not succesfully updated, trial #' num2str(currentTrial) ' skipped ***']);
@@ -332,19 +336,16 @@ function CuedOutcome_odor_complete
             BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
             BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
             BpodSystem.Data.TrialTypes(end + 1) = TrialType; % Adds the trial type of the current trial to data
-            BpodSystem.Data.TrialOutcome(end + 1) = UsOutcomes(currentTrial);
-            BpodSystem.Data.OdorValve(end + 1) =  odorValve;
+            BpodSystem.Data.TrialOutcome(end + 1) = TrialOutcome;
+            BpodSystem.Data.OdorValve(end + 1) =  OdorValve;
             BpodSystem.Data.Epoch(end + 1) = S.GUI.Epoch;
-            BpodSystem.Data.Us
-            try
-                BpodSystem.Data.Us(currentTrial) = Us{currentTrial}; % fluff, nice to have the strings for 'reward', 'punish', 'omit'
-            catch
-                BpodSystem.Data.Us = Us{currentTrial}; % I'm in a hurry...
-            end
+            BpodSystem.Data.Us{end + 1} = Us;
+            BpodSystem.Data.Cs{end + 1} = Cs;            
 
             if ismember(TrialType, [1 4 7])
                 TotalRewardDisplay('add', S.GUI.Reward); 
             end
+            
             bpLickRaster(BpodSystem.Data, lickPlot.Types{1}, lickPlot.Outcomes{1}, 'DeliverStimulus', [], lickPlot.Ax(1));
             set(gca, 'XLim', [-3, 6]);
             bpLickRaster(BpodSystem.Data, lickPlot.Types{2}, lickPlot.Outcomes{2}, 'DeliverStimulus', [], lickPlot.Ax(2));            
@@ -352,7 +353,7 @@ function CuedOutcome_odor_complete
             %save data
             SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
         else
-            disp('WTF');
+            disp(' *** Warning no data returned ***'); % not sure why this would happen
         end
         HandlePauseCondition; % Checks to see if the protocol is paused. If so, waits until user resumes.
         if BpodSystem.BeingUsed == 0
