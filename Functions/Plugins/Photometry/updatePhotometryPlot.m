@@ -1,4 +1,7 @@
-function updatePhotometryPlot
+function updatePhotometryPlot(startX)
+    if nargin < 1
+        startX = 0;
+    end
     global BpodSystem nidaq
     lowCutoff = 15;
     
@@ -15,7 +18,10 @@ function updatePhotometryPlot
     else
         demod_ch2 = nidaq.ai_data(:,2);
     end
-    plot(BpodSystem.ProtocolFigures.NIDAQPanel1,(0:length(demod_ch1)-1)/nidaq.sample_rate,demod_ch1);
+    xData = startX:1/nidaq.sample_rate:startX + 1/nidaq.sample_rate * (nidaq.duration * nidaq.sample_rate - 1); % begin at startX, spacing = 1/nidaq.sample_rate
+    plot(BpodSystem.ProtocolFigures.NIDAQPanel1,(
+    
+    startX:1/nidaq.sample_rate:length(demod_ch1)-1)/nidaq.sample_rate,demod_ch1);
     plot(BpodSystem.ProtocolFigures.NIDAQPanel2,(0:length(demod_ch2)-1)/nidaq.sample_rate,demod_ch2);
     
     zoomFactor = 5; % scale y axis +/- zoomFactor standard deviations from the mean
