@@ -177,6 +177,7 @@ function CuedOutcome_odor_complete
     postUs = S.PostUsRecording;
     binWidth = 0.5;
     lickHistPlot.lickHistFig = ensureFigure('lickHist', 1);
+    lickHistPlot.ax = axes('TickDir', 'out');
     lickHistPlot.Types = {[1 2 3], [4 5 6], [], [], []};
     lickHistPlot.Outcomes = {[], [], 1, 2, 3};
     lickHistPlot.zeroField = repmat({'Us'}, 1, 5);
@@ -354,13 +355,13 @@ function CuedOutcome_odor_complete
                 TotalRewardDisplay('add', S.GUI.Reward); 
             end
             
-            bpLickRaster(BpodSystem.Data, lickRasterPlot.Types{1}, lickRasterPlot.Outcomes{1}, 'DeliverStimulus', [], lickRasterPlot.Ax(1));
-            set(gca, 'XLim', [-3, 6]);
-            bpLickRaster(BpodSystem.Data, lickRasterPlot.Types{2}, lickRasterPlot.Outcomes{2}, 'DeliverStimulus', [], lickRasterPlot.Ax(2));            
-            set(gca, 'XLim', [-3, 6]);
+            bpLickRaster(BpodSystem.Data, lickRasterPlot.Types{1}, lickRasterPlot.Outcomes{1}, 'Us', [], lickRasterPlot.Ax(1));
+            set(gca, 'XLim', [-6, 4]);
+            bpLickRaster(BpodSystem.Data, lickRasterPlot.Types{2}, lickRasterPlot.Outcomes{2}, 'Us', [], lickRasterPlot.Ax(2));            
+            set(gca, 'XLim', [-6, 4]);
             
             %% update lick histograms
-            axes(lickHistplot.ax);
+            axes(lickHistPlot.ax);
             cla;
             linecolors = {'c', 'm', 'b', 'r', 'k'};
             for i = 1:length(lickHistPlot.Types);
