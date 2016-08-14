@@ -1,4 +1,4 @@
-function updatePhotometryPlot(startX)
+function [demod_ch1, demod_ch2] = updatePhotometryPlot(startX)
     if nargin < 1
         startX = 0;
     end
@@ -18,11 +18,16 @@ function updatePhotometryPlot(startX)
     else
         demod_ch2 = nidaq.ai_data(:,2);
     end
-    xData = startX:1/nidaq.sample_rate:startX + 1/nidaq.sample_rate * (nidaq.duration * nidaq.sample_rate - 1); % begin at startX, spacing = 1/nidaq.sample_rate
-    plot(BpodSystem.ProtocolFigures.NIDAQPanel1,(
     
-    startX:1/nidaq.sample_rate:length(demod_ch1)-1)/nidaq.sample_rate,demod_ch1);
-    plot(BpodSystem.ProtocolFigures.NIDAQPanel2,(0:length(demod_ch2)-1)/nidaq.sample_rate,demod_ch2);
+    xData = startX:1/nidaq.sample_rate:startX + 1/nidaq.sample_rate * (nidaq.duration * nidaq.sample_rate - 1); % begin at startX, spacing = 1/nidaq.sample_rate
+    %% pad if acquisition stopped short
+    samplesShort = length(xData) - length(demod_ch1);
+    if samplesShort % i.e. not 0
+        demod_ch1 = [demod_ch1 NaN(samplesShort, 1)];
+        demod_ch2 = [demod_ch2 NaN(samplesShort, 1)];        
+    end
+    plot(BpodSystem.ProtocolFigures.NIDAQPanel1,xData, demod_ch1);
+    plot(BpodSystem.ProtocolFigures.NIDAQPanel2,xData,demod_ch2);
     
     zoomFactor = 5; % scale y axis +/- zoomFactor standard deviations from the mean
     ylabel(BpodSystem.ProtocolFigures.NIDAQPanel1,{'Ch1'});

@@ -158,20 +158,35 @@ function CuedOutcome_odor_complete
     outcomeSpan = 20;
 %     set(outcomeAxes, 'XLim', [0 outcomeSpan]);
 
-%% init lick raster plot
-    lickPlot = struct(...
+%% init lick raster plot, uses session analysis functions (~Winter-Spring, 2016)
+    lickRasterPlot = struct(...
         'lickRasterFig', [],...
         'Ax', [],...
         'Types', [],...
         'Outcomes', []...
         );
-    lickPlot.lickRasterFig = ensureFigure('Reward_Licks', 1);
-    lickPlot.Ax(1) = subplot(2,1,1); title('High Value');
-    lickPlot.Ax(2) = subplot(2,1,2); title('Low Value');
-    lickPlot.Types{1} = [1 2 3]; % 
-    lickPlot.Types{2} = [4 5 6];
-    lickPlot.Outcomes{1} =  [1 2 3];
-    lickPlot.Outcomes{2} = [1 2 3];
+    lickRasterPlot.lickRasterFig = ensureFigure('lickRaster', 1);
+    lickRasterPlot.Ax(1) = subplot(2,1,1); title('High Value');
+    lickRasterPlot.Ax(2) = subplot(2,1,2); title('Low Value');
+    lickRasterPlot.Types{1} = [1 2 3]; % 
+    lickRasterPlot.Types{2} = [4 5 6];
+    lickRasterPlot.Outcomes{1} =  [1 2 3];
+    lickRasterPlot.Outcomes{2} = [1 2 3];
+%% init lick hist plot
+    preUs = S.PreCsRecording - S.GUI.OdorTime - S.GUI.Delay;
+    postUs = S.PostUsRecording;
+    binWidth = 0.5;
+    lickHistPlot.lickHistFig = ensureFigure('lickHist', 1);
+    lickHistPlot.Types = {[1 2 3], [4 5 6], [], [], []};
+    lickHistPlot.Outcomes = {[], [], 1, 2, 3};
+    lickHistPlot.zeroField = repmat({'Us'}, 1, 5);
+    lickHistPlot.startField = {'PreCsRecording', 'PreCsRecording', 'Us', 'Us', 'Us'};
+    lickHistPlot.endField = {'Delay', 'Delay', 'PostUsRecording', 'PostUsRecording', 'PostUsRecording'};
+    lickHistPlot.binSpecs = {[-preUs 0 binWidth], [-preUs 0 binWidth], [0 postUs binWidth], [0 postUs binWidth], [0 postUs binWidth]};
+%%  Initialize photometry session analysis plots
+	phData.demod = cell(1,2); % size = [nTrials, nChannels]
+    phData.downsample = 500;
+    phData.blF = {}; %[nTrials, 1] 
 
     %% Main trial loop
     for currentTrial = 1:MaxTrials
@@ -227,10 +242,10 @@ function CuedOutcome_odor_complete
         end
 
         % determine cue
-        if ismember(TrialTypes, [1 2 3])
+        if ismember(TrialType, [1 2 3])
             OdorValve = S.GUI.highValueOdorValve;
             Cs = 'highValue';
-        elseif ismember(TrialTypes, [4 5 6])
+        elseif ismember(TrialType, [4 5 6])
             OdorValve = S.GUI.lowValueOdorValve;        
             Cs = 'lowValue';
         else
@@ -339,10 +354,20 @@ function CuedOutcome_odor_complete
                 TotalRewardDisplay('add', S.GUI.Reward); 
             end
             
-            bpLickRaster(BpodSystem.Data, lickPlot.Types{1}, lickPlot.Outcomes{1}, 'DeliverStimulus', [], lickPlot.Ax(1));
+            bpLickRaster(BpodSystem.Data, lickRasterPlot.Types{1}, lickRasterPlot.Outcomes{1}, 'DeliverStimulus', [], lickRasterPlot.Ax(1));
             set(gca, 'XLim', [-3, 6]);
-            bpLickRaster(BpodSystem.Data, lickPlot.Types{2}, lickPlot.Outcomes{2}, 'DeliverStimulus', [], lickPlot.Ax(2));            
-            set(gca, 'XLim', [-3, 6]);            
+            bpLickRaster(BpodSystem.Data, lickRasterPlot.Types{2}, lickRasterPlot.Outcomes{2}, 'DeliverStimulus', [], lickRasterPlot.Ax(2));            
+            set(gca, 'XLim', [-3, 6]);
+            
+            %% update lick histograms
+            axes(lickHistplot.ax);
+            cla;
+            linecolors = {'c', 'm', 'b', 'r', 'k'};
+            for i = 1:length(lickHistPlot.Types);
+                bpLickHist(BpodSystem.Data, lickHistPlot.Types{i}, lickHistPlot.Outcomes{i}, lickHistPlot.binSpecs{i},...
+                    lickHistPlot.zeroField{i}, lickHistPlot.startField{i}, lickHistPlot.endField{i}, linecolors{i}, [], gca);
+            end
+            
             %save data
             SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
         else

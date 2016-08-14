@@ -4,11 +4,10 @@ function demod = phDemod(rawData, refData, sampleRate, modRate, lowCutoff)
 % lowCutoff corner frequency for 5-pole butterworth filter (lowpass),
 % default = [], i.e. no filtering is performed
 
+
     if nargin < 5
         lowCutoff = []; 
     end
-    
-
     
     if size(rawData, 2) ~= 1 ||size(refData, 2) ~= 1
         disp('*** Error in phDemod, refData and rawData must be column vectors ***');
@@ -42,14 +41,11 @@ function demod = phDemod(rawData, refData, sampleRate, modRate, lowCutoff)
     [b, a] = butter(5, lowCutoff, 'low');   
     pad = 1;
     if pad
-%         paddedData = fliplr(demodData(1:sampleRate, 1)); % pad with 1s of reflected data
         paddedData = demodData(randperm(sampleRate), 1); % pad with 1s of randomized data (should still contain DC trend)
-%         demodDataFilt = filtfilt(b,a,[paddedData; demodData]);
-% For online analysis don't use filtfilt for speed        
+%% For online analysis don't use filtfilt for speed        
         demodDataFilt = filter(b,a,[paddedData; demodData]);        
         demod = demodDataFilt(sampleRate + 1: end, 1);
     else
-%         demod = filtfilt(b, a, demodData);
         demod = filter(b, a, demodData);
     end
     %% I should just normalize by basleine period (say from 0.5 - 1.5s)
