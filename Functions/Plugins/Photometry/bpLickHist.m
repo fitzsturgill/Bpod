@@ -45,13 +45,22 @@ function [ax, lh, lp] = bpLickHist(SessionData, type, outcome, binSpecs, zeroFie
     for counter = 1:length(type)
         color = linespec{counter};
         if iscell(outcome)
-            thisOutcome = outcome{counter}; % to accomadate multiple outcomes to be grouped together
+            thisOutcome = outcome{counter}; % to accommodate multiple outcomes to be grouped together
         elseif isempty(outcome)
-            thisOutcome = [];
+            thisOutcome = []; % like a wildcard, don't filter by outcome if empty
         else
             thisOutcome = outcome(counter);
         end
-        [lickRates, lickRatesN, binCenters] =  bpLickCounts(SessionData, type(counter), thisOutcome, zeroField, binSpecs, startField, endField);
+        
+        if iscell(type)
+            thisType = type{counter}; % to accommodate multiple types to be grouped together
+        elseif isempty(type)
+            thisType = [];
+        else
+            thisType = type(counter);
+        end
+        
+        [lickRates, lickRatesN, binCenters] =  bpLickCounts(SessionData, thisType, thisOutcome, zeroField, binSpecs, startField, endField);
 %         lickRatesAvg = sum(lickRates) ./ lickRatesN;
         lickRatesAvg = nanmean(lickRates);
         lickRatesSEM = std(lickRates, 'omitnan') ./ sqrt(sum(~isnan(lickRates), 1));

@@ -365,8 +365,8 @@ function CuedOutcome_odor_complete
             cla;
             linecolors = {'c', 'm', 'b', 'r', 'k'};
             for i = 1:length(lickHistPlot.Types);
-                bpLickHist(BpodSystem.Data, lickHistPlot.Types{i}, lickHistPlot.Outcomes{i}, lickHistPlot.binSpecs{i},...
-                    lickHistPlot.zeroField{i}, lickHistPlot.startField{i}, lickHistPlot.endField{i}, linecolors{i}, [], gca);
+                bpLickHist(BpodSystem.Data, lickHistPlot.Types(i), lickHistPlot.Outcomes(i), lickHistPlot.binSpecs{i},...
+                    lickHistPlot.zeroField{i}, lickHistPlot.startField{i}, lickHistPlot.endField{i}, linecolors(i), [], gca);
             end
             
             %save data
