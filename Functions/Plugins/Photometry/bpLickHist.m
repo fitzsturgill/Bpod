@@ -62,10 +62,14 @@ function [ax, lh, lp] = bpLickHist(SessionData, type, outcome, binSpecs, zeroFie
         
         [lickRates, lickRatesN, binCenters] =  bpLickCounts(SessionData, thisType, thisOutcome, zeroField, binSpecs, startField, endField);
 %         lickRatesAvg = sum(lickRates) ./ lickRatesN;
-        lickRatesAvg = nanmean(lickRates);
-        lickRatesSEM = std(lickRates, 'omitnan') ./ sqrt(sum(~isnan(lickRates), 1));
-    
-        [thisLine, thisPatch] = boundedline(binCenters, lickRatesAvg, lickRatesSEM, color, ax, 'alpha');
+        if isvector(lickRates) % e.g. first trial when using bpLickHist for online plotting
+            thisLine = plot(binCenters, lickRates, color);
+            thisPatch = NaN;
+        else
+            lickRatesAvg = nanmean(lickRates);
+            lickRatesSEM = std(lickRates, 'omitnan') ./ sqrt(sum(~isnan(lickRates), 1));
+            [thisLine, thisPatch] = boundedline(binCenters, lickRatesAvg, lickRatesSEM, color, ax, 'alpha');
+        end
         lh(counter) = thisLine;
         lp(counter) = thisPatch;
     end
