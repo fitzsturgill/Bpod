@@ -99,7 +99,7 @@ function odorTest
     
     MaxTrials = 1000;    
     TrialTypes = defineRandomizedTrials(typeMatrix, MaxTrials);
-    
+    TrialTypes = rem(0:999, 3) + 5; % kludge, don't randomize
     %% define outcomes, sound durations, and valve times
     UsOutcomes = TrialTypes;
 
