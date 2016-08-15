@@ -94,9 +94,8 @@ function S = initPhotometry(S)
     updateLEDData(S); % create and cue data for output
     % data available notify must be set after queueing data
 %     nidaq.session.NotifyWhenDataAvailableExceeds = floor(nidaq.session.Rate / 1); % update rate = 1Hz     
+    nidaq.session.NotifyWhenDataAvailableExceeds = nidaq.duration * nidaq.sample_rate; % at end of complete acquisition     
     lh{1} = nidaq.session.addlistener('DataAvailable',@processNidaqData);
-     
-
 end
 
   

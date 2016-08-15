@@ -322,10 +322,12 @@ function CuedOutcome_odor_complete
         %% Run state matrix
         RawEvents = RunStateMatrix();  % Blocking!
 
-        %% Process NIDAQ session
-        processPhotometryAcq(currentTrial);
-        
+
         if ~isempty(fieldnames(RawEvents)) % If trial data was returned
+            %% Process NIDAQ session
+            processPhotometryAcq(currentTrial);
+            %% online plotting
+            updatePhotometryPlot(startX)            
             BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
             BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
             BpodSystem.Data.TrialTypes(end + 1) = TrialType; % Adds the trial type of the current trial to data
@@ -356,7 +358,7 @@ function CuedOutcome_odor_complete
             %save data
             SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
         else
-            disp([' *** Trial # ' num2str(currentTrial) ': Warning, data missing ***']); % happens when you abort early (I think), e.g. when you are halting session
+            disp([' *** Trial # ' num2str(currentTrial) ':  aborted, data not saved ***']); % happens when you abort early (I think), e.g. when you are halting session
         end
         HandlePauseCondition; % Checks to see if the protocol is paused. If so, waits until user resumes.
         if BpodSystem.BeingUsed == 0

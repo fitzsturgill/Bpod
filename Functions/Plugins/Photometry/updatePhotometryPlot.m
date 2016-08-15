@@ -9,7 +9,11 @@ function [demod_ch1, demod_ch2] = updatePhotometryPlot(startX)
     LED2_f = nidaq.LED2_f;
     
     if nidaq.LED1_amp > 0
-        demod_ch1 = phDemod(nidaq.ai_data(:,1), nidaq.ao_data(:,1), nidaq.sample_rate, LED1_f, lowCutoff);
+%         try
+            demod_ch1 = phDemod(nidaq.ai_data(:,1), nidaq.ao_data(:,1), nidaq.sample_rate, LED1_f, lowCutoff);
+%         catch
+%             disp('wtf');
+%         end
     else
         demod_ch1 = nidaq.ai_data(:,1);
     end
@@ -38,10 +42,12 @@ function [demod_ch1, demod_ch2] = updatePhotometryPlot(startX)
     ylabel(BpodSystem.ProtocolFigures.NIDAQPanel1,{'Ch1'});
     m1 = mean(demod_ch1);
     s1 = std(demod_ch1);
+    
     set(BpodSystem.ProtocolFigures.NIDAQPanel1, 'YLim', [m1 - s1*zoomFactor, m1 + s1*zoomFactor]);
     ylabel(BpodSystem.ProtocolFigures.NIDAQPanel2,{'Ch2'})
     m2 = mean(demod_ch2);
     s2 = std(demod_ch2);    
     set(BpodSystem.ProtocolFigures.NIDAQPanel2, 'YLim', [m2 - s2*zoomFactor, m2 + s2*zoomFactor]);
+
     drawnow;
 %     legend(nidaq.ai_channels,'Location','East')
