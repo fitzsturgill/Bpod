@@ -19,9 +19,10 @@ function [demod_ch1, demod_ch2] = updatePhotometryPlot(startX)
         demod_ch2 = nidaq.ai_data(:,2);
     end
     
-    xData = startX:1/nidaq.sample_rate:startX + 1/nidaq.sample_rate * (nidaq.duration * nidaq.sample_rate - 1); % begin at startX, spacing = 1/nidaq.sample_rate
+%     xData = startX:1/nidaq.sample_rate:startX + 1/nidaq.sample_rate * (nidaq.duration * nidaq.sample_rate - 1); % begin at startX, spacing = 1/nidaq.sample_rate
+    xData = startX:1/nidaq.sample_rate:startX + nidaq.duration - 1/nidaq.sample_rate; %simplified version of above commented line, last sample starts 1/sample_rate short of duration 
     xData = xData';
-    %% pad if acquisition stopped short
+    %% pad or truncate if acquisition stopped short or long, but this is redundant- see processNidaqData
     samplesShort = length(xData) - length(demod_ch1);
     if samplesShort > 0 % i.e. not 0
         demod_ch1 = [demod_ch1; NaN(samplesShort, 1)];

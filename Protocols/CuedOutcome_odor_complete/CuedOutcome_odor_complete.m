@@ -317,30 +317,14 @@ function CuedOutcome_odor_complete
         SendStateMatrix(sma);
 
         %% prep data acquisition
-        updateLEDData(S); % FS MOD        
-        nidaq.ai_data = [];
-        nidaq.session.prepare(); %Saves 50ms on startup time, perhaps more for repeats.
-        nidaq.session.startBackground(); % takes ~0.1 second to start and release control.
+        preparePhotometryAcq(S);
 
         %% Run state matrix
         RawEvents = RunStateMatrix();  % Blocking!
 
-        %% Clean up data acquisition
-        pause(0.05); 
-        nidaq.session.stop() % Kills ~0.002 seconds after state matrix is done.
-        wait(nidaq.session) % Trying to wait until session is done - did we record the full session?
-
-        % demodulate and plot trial data
-        try
-            updatePhotometryPlot;
-        catch
-        end
-        % ensure outputs reset to zero
-        nidaq.session.outputSingleScan(zeros(1,length(nidaq.aoChannels)));
-
-        %% Save data in BpodSystem format.
-        BpodSystem.Data.NidaqData{currentTrial, 1} = nidaq.ai_data; %input data
-        BpodSystem.Data.NidaqData{currentTrial, 2} = nidaq.ao_data; % output data
+        %% Process NIDAQ session
+        processPhotometryAcq(currentTrial);
+        
         if ~isempty(fieldnames(RawEvents)) % If trial data was returned
             BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
             BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
@@ -372,7 +356,7 @@ function CuedOutcome_odor_complete
             %save data
             SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
         else
-            disp(' *** Warning no data returned ***'); % not sure why this would happen
+            disp([' *** Trial # ' num2str(currentTrial) ': Warning, data missing ***']); % happens when you abort early (I think), e.g. when you are halting session
         end
         HandlePauseCondition; % Checks to see if the protocol is paused. If so, waits until user resumes.
         if BpodSystem.BeingUsed == 0

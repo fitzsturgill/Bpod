@@ -81,7 +81,7 @@ function S = initPhotometry(S)
     % add trigger external trigger, if specified
     if S.nidaq.TriggerConnection
         addTriggerConnection(nidaq.session, 'external', [S.nidaq.Device '/' S.nidaq.TriggerSource], 'StartTrigger');
-        nidaq.session.ExternalTriggerTimeout = 60;
+        nidaq.session.ExternalTriggerTimeout = 900;
     end
     
     % Sampling rate and continuous updating (important for queue-ing ao data)
@@ -93,7 +93,7 @@ function S = initPhotometry(S)
     %%
     updateLEDData(S); % create and cue data for output
     % data available notify must be set after queueing data
-    nidaq.session.NotifyWhenDataAvailableExceeds = floor(nidaq.session.Rate / 1); % update rate = 1Hz     
+%     nidaq.session.NotifyWhenDataAvailableExceeds = floor(nidaq.session.Rate / 1); % update rate = 1Hz     
     lh{1} = nidaq.session.addlistener('DataAvailable',@processNidaqData);
      
 
