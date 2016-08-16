@@ -17,8 +17,8 @@ function processPhotometryOnline(currentTrial)
         chData = nidaq.online.trialDemodData{currentTrial, ch};
         bl = mean(chData(blStartP:blEndP));
         dFF = (chData - bl) ./ bl;
-        BpodSystem.Photometry.trialDFF{ch}(currentTrial, :) = dFF;
+        BpodSystem.PluginObjects.Photometry.trialDFF{ch}(currentTrial, :) = dFF;
         trialBaselines(ch) = bl;
     end
-    BpodSystem.Photometry.blF(currentTrial, :) = trialBaselines;
+    BpodSystem.PluginObjects.Photometry.blF(currentTrial, :) = trialBaselines;
     

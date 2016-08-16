@@ -185,9 +185,9 @@ function CuedOutcome_odor_complete
     lickHistPlot.endField = {'Delay', 'Delay', 'PostUsRecording', 'PostUsRecording', 'PostUsRecording'};
     lickHistPlot.binSpecs = {[-preUs 0 binWidth], [-preUs 0 binWidth], [0 postUs binWidth], [0 postUs binWidth], [0 postUs binWidth]};
 %%  Initialize photometry session analysis plots    
-    BpodSystem.Photometry.blF = []; %[nTrials, nDemodChannels]
-    BpodSystem.Photometry.baselinePeriod = [1 S.PreCsRecording];
-    BpodSystem.Photometry.trialDFF = {}; % 1 x nDemodChannels cell array, fill with nTrials x nSamples dFF matrix for now to make it easy to pull out raster data
+    BpodSystem.PluginObjects.Photometry.blF = []; %[nTrials, nDemodChannels]
+    BpodSystem.PluginObjects.Photometry.baselinePeriod = [1 S.PreCsRecording];
+    BpodSystem.PluginObjects.Photometry.trialDFF = {}; % 1 x nDemodChannels cell array, fill with nTrials x nSamples dFF matrix for now to make it easy to pull out raster data
     if S.GUI.PunishOn
         BpodSystem.ProtocolFigures.phRaster.types = 1:9;
     else
@@ -367,14 +367,14 @@ function CuedOutcome_odor_complete
                     lickHistPlot.zeroField{i}, lickHistPlot.startField{i}, lickHistPlot.endField{i}, linecolors(i), [], gca);
             end
             %% update photometry rasters, just do channel 1 for now...
-            phMean = mean(mean(BpodSystem.Photometry.trialDFF(:,bpX2pnt(BpodSystem.Photometry.baselinePeriod(1), nidaq.sample_rate, 0):bpX2pnt(BpodSystem.Photometry.baselinePeriod(2), nidaq.sample_rate, 0))));
-            phStd = mean(std(BpodSystem.Photometry.trialDFF(:,bpX2pnt(BpodSystem.Photometry.baselinePeriod(1), nidaq.sample_rate, 0):bpX2pnt(BpodSystem.Photometry.baselinePeriod(2), nidaq.sample_rate, 0))));            
+            phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF(:,bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(1), nidaq.sample_rate, 0):bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), nidaq.sample_rate, 0))));
+            phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF(:,bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(1), nidaq.sample_rate, 0):bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), nidaq.sample_rate, 0))));            
             types = BpodSystem.ProtocolFigures.phRaster.types;
             lookupFactor = 4;
             for i = 1:length(types)
                 ax = BpodSystem.ProtocolFigures.phRaster.ax(i);
                 trials = onlineFilterTrials(types(i));
-                image(BpodSystem.Photometry.trialDFF{1}(trials, :), 'CDataMapping', 'Scaled', 'Parent', ax);
+                image(BpodSystem.PluginObjects.Photometry.trialDFF{1}(trials, :), 'CDataMapping', 'Scaled', 'Parent', ax);
                 set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
             end
             
