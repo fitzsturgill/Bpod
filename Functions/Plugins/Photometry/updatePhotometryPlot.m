@@ -1,42 +1,16 @@
-function [demod_ch1, demod_ch2] = updatePhotometryPlot(startX)
+function updatePhotometryPlot(startX)
+% startX: time point in seconds from beginning of photometry
+% acquisition to be defined as 0
     if nargin < 1
         startX = 0;
     end
     global BpodSystem nidaq
-    lowCutoff = 15;
+    xData = nidaq.online.currentXData - startX;
     
-    LED1_f = nidaq.LED1_f;
-    LED2_f = nidaq.LED2_f;
-    
-    if nidaq.LED1_amp > 0
-%         try
-            demod_ch1 = phDemod(nidaq.ai_data(:,1), nidaq.ao_data(:,1), nidaq.sample_rate, LED1_f, lowCutoff);
-%         catch
-%             disp('wtf');
-%         end
-    else
-        demod_ch1 = nidaq.ai_data(:,1);
-    end
-    if nidaq.LED2_amp > 0    
-        demod_ch2 = phDemod(nidaq.ai_data(:,2), nidaq.ao_data(:,2), nidaq.sample_rate, LED2_f, lowCutoff);    
-    else
-        demod_ch2 = nidaq.ai_data(:,2);
-    end
-    
-%     xData = startX:1/nidaq.sample_rate:startX + 1/nidaq.sample_rate * (nidaq.duration * nidaq.sample_rate - 1); % begin at startX, spacing = 1/nidaq.sample_rate
-    xData = startX:1/nidaq.sample_rate:startX + nidaq.duration - 1/nidaq.sample_rate; %simplified version of above commented line, last sample starts 1/sample_rate short of duration 
-    xData = xData';
-    %% pad or truncate if acquisition stopped short or long, but this is redundant- see processNidaqData
-    samplesShort = length(xData) - length(demod_ch1);
-    if samplesShort > 0 % i.e. not 0
-        demod_ch1 = [demod_ch1; NaN(samplesShort, 1)];
-        demod_ch2 = [demod_ch2; NaN(samplesShort, 1)];        
-    elseif samplesShort < 0
-        demod_ch1 = demod_ch1(1:length(xData));
-        demod_ch2 = demod_ch2(1:length(xData));
-    end
+    demod_ch1 = nidaq.online.currentDemodData{1};
+    demod_ch2 = nidaq.online.currentDemodData{2};
     plot(BpodSystem.ProtocolFigures.NIDAQPanel1,xData, demod_ch1);
-    plot(BpodSystem.ProtocolFigures.NIDAQPanel2,xData,demod_ch2);
+    plot(BpodSystem.ProtocolFigures.NIDAQPanel2,xData, demod_ch2);
     
     zoomFactor = 5; % scale y axis +/- zoomFactor standard deviations from the mean
     ylabel(BpodSystem.ProtocolFigures.NIDAQPanel1,{'Ch1'});

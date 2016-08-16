@@ -25,7 +25,7 @@ function SO_RewardPunish_odor
    
     
     global BpodSystem nidaq
-
+    %% init H20 delivered to mouse display element
     TotalRewardDisplay('init')
     %% Define parameters
     S = BpodSystem.ProtocolSettings; % Load settings chosen in launch manager into current workspace as a struct called S
@@ -78,6 +78,7 @@ function SO_RewardPunish_odor
     
     %% Initialize NIDAQ
     S.nidaq.duration = S.PreCsRecording + S.GUI.OdorTime + S.GUI.Delay + S.PostUsRecording;
+    startX = 0 - S.PreCsRecording - S.GUI.OdorTime - S.GUI.Delay; % time from reinforcement
     S = initPhotometry(S);
     
     %% Initialize olfactometer and point grey camera
@@ -118,8 +119,7 @@ function SO_RewardPunish_odor
     
 
     
-    %% pause and reintialize photometry if parameters have been changed???
-    %% also save settings??
+
     %% Populate Settings field with initial ProtocolSettings (these can change, see also TrialSettings field)
     BpodSystem.Data.Settings = S;
 
@@ -310,44 +310,21 @@ function SO_RewardPunish_odor
             'StateChangeConditions',{'Tup','exit'},...
             'OutputActions',{});
 
-        %%
+        %% send state matrix
         BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
         SendStateMatrix(sma);
+        %% prep data acquisition
+        preparePhotometryAcq(S);
 
-        % NIDAQ :: Initialize data matrix and start nidaq in background - this takes ~150ms
-       
-        updateLEDData(S); % FS MOD
-        
-        %% make this a function
-        nidaq.ai_data = [];
-        % Dropping from 10hz to 5hz seems to fix the short-nidaq-recording bug?
-%         nidaq.session.NotifyWhenDataAvailableExceeds = nidaq.session.Rate/5; % Must be done after queueing data.
-        nidaq.session.prepare(); %Saves 50ms on startup time, perhaps more for repeats.
-        nidaq.session.startBackground(); % takes ~0.1 second to start and release control.
-        %%
-
-        % Run state matrix
+        %% Run state matrix
         RawEvents = RunStateMatrix();  % Blocking!
-
-        %% this too a function
-        % NIDAQ :: Stop nidaq.session and cleanup
-        pause(0.05); 
-        nidaq.session.stop() % Kills ~0.002 seconds after state matrix is done.
-        wait(nidaq.session) % Tring to wait until session is done - did we record the full session?
-        % demodulate and plot trial data
-        try
-            updatePhotometryPlot;
-        catch
-        end
         
-        nidaq.session.outputSingleScan(zeros(1,length(nidaq.aoChannels)));
-        % ..... :: Ensure we drop our outputs back to zero if at all possible - takes ~0.01 seconds.
-%         nidaq.session.outputSingleScan(zeros(1,length(nidaq.do_channels))); 
-        % ..... :: Save data in BpodSystem format.
-        BpodSystem.Data.NidaqData{currentTrial, 1} = nidaq.ai_data; %input data
-        BpodSystem.Data.NidaqData{currentTrial, 2} = nidaq.ao_data; % output data
-        % /NIDAQ
         if ~isempty(fieldnames(RawEvents)) % If trial data was returned
+            %% Process NIDAQ session
+            processPhotometryAcq(currentTrial);
+            %% online plotting
+            updatePhotometryPlot(startX)       
+            %% collect and save data
             BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
             BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
             BpodSystem.Data.TrialTypes(currentTrial) = TrialTypes(currentTrial); % Adds the trial type of the current trial to data

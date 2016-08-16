@@ -184,11 +184,22 @@ function CuedOutcome_odor_complete
     lickHistPlot.startField = {'PreCsRecording', 'PreCsRecording', 'Us', 'Us', 'Us'};
     lickHistPlot.endField = {'Delay', 'Delay', 'PostUsRecording', 'PostUsRecording', 'PostUsRecording'};
     lickHistPlot.binSpecs = {[-preUs 0 binWidth], [-preUs 0 binWidth], [0 postUs binWidth], [0 postUs binWidth], [0 postUs binWidth]};
-%%  Initialize photometry session analysis plots
-	phData.demod = cell(1,2); % size = [nTrials, nChannels]
-    phData.downsample = 500;
-    phData.blF = {}; %[nTrials, 1] 
-
+%%  Initialize photometry session analysis plots    
+    BpodSystem.Photometry.blF = []; %[nTrials, nDemodChannels]
+    BpodSystem.Photometry.baselinePeriod = [1 S.PreCsRecording];
+    BpodSystem.Photometry.trialDFF = {}; % 1 x nDemodChannels cell array, fill with nTrials x nSamples dFF matrix for now to make it easy to pull out raster data
+    if S.GUI.PunishOn
+        BpodSystem.ProtocolFigures.phRaster.types = 1:9;
+    else
+        BpodSystem.ProtocolFigures.phRaster.types = [1 3 7 9];
+    end
+    BpodSystem.ProtocolFigures.phRaster.fig = ensureFigure('phRaster', 1);
+    BpodSystem.ProtocolFigures.phRaster.ax = zeros(1, length(BpodSystem.ProtocolFigures.phRaster.types));
+    for i = 1:length(BpodSystem.ProtocolFigures.phRaster.types)
+        BpodSystem.ProtocolFigures.phRaster.ax(i) = subplot(1, length(BpodSystem.ProtocolFigures.phRaster.types), i);
+        set(gca, 'YDir', 'Reverse', 'Visible', 'off');
+    end
+    
     %% Main trial loop
     for currentTrial = 1:MaxTrials
         S = BpodParameterGUI('sync', S); % Sync parameters with BpodParameterGUI plugin 
@@ -328,6 +339,7 @@ function CuedOutcome_odor_complete
             processPhotometryAcq(currentTrial);
             %% online plotting
             updatePhotometryPlot(startX)            
+            %% collect and save data
             BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
             BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
             BpodSystem.Data.TrialTypes(end + 1) = TrialType; % Adds the trial type of the current trial to data
@@ -354,8 +366,19 @@ function CuedOutcome_odor_complete
                 bpLickHist(BpodSystem.Data, lickHistPlot.Types(i), lickHistPlot.Outcomes(i), lickHistPlot.binSpecs{i},...
                     lickHistPlot.zeroField{i}, lickHistPlot.startField{i}, lickHistPlot.endField{i}, linecolors(i), [], gca);
             end
+            %% update photometry rasters, just do channel 1 for now...
+            phMean = mean(mean(BpodSystem.Photometry.trialDFF(:,bpX2pnt(BpodSystem.Photometry.baselinePeriod(1), nidaq.sample_rate, 0):bpX2pnt(BpodSystem.Photometry.baselinePeriod(2), nidaq.sample_rate, 0))));
+            phStd = mean(std(BpodSystem.Photometry.trialDFF(:,bpX2pnt(BpodSystem.Photometry.baselinePeriod(1), nidaq.sample_rate, 0):bpX2pnt(BpodSystem.Photometry.baselinePeriod(2), nidaq.sample_rate, 0))));            
+            types = BpodSystem.ProtocolFigures.phRaster.types;
+            lookupFactor = 4;
+            for i = 1:length(types)
+                ax = BpodSystem.ProtocolFigures.phRaster.ax(i);
+                trials = onlineFilterTrials(types(i));
+                image(BpodSystem.Photometry.trialDFF{1}(trials, :), 'CDataMapping', 'Scaled', 'Parent', ax);
+                set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
+            end
             
-            %save data
+            %% save data
             SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
         else
             disp([' *** Trial # ' num2str(currentTrial) ':  aborted, data not saved ***']); % happens when you abort early (I think), e.g. when you are halting session
