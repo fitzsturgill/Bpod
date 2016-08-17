@@ -1,7 +1,7 @@
 function phDemodOnline(currentTrial)
     global BpodSystem nidaq
 
-    decimationfactor = nidaq.online.decimationFactor;
+    decimationFactor = nidaq.online.decimationFactor;
     lowCutoff = 15;
     LED1_f = nidaq.LED1_f;
     LED2_f = nidaq.LED2_f;

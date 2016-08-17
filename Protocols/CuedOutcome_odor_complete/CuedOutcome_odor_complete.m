@@ -333,11 +333,17 @@ function CuedOutcome_odor_complete
         %% Run state matrix
         RawEvents = RunStateMatrix();  % Blocking!
 
-
+        pause(0.05); % wait for hardware to stop, see error message below, I think this addresses the below error message:
+    %     Error using processNidaqData (line 15)
+    % Internal Error: The hardware did not report that it stopped before the timeout elapsed.
+        nidaq.session.stop(); % Kills ~0.002 seconds after state matrix is done.
+        wait(nidaq.session);
+        nidaq.session.outputSingleScan([0 0]); % make sure LEDs are turned off
         if ~isempty(fieldnames(RawEvents)) % If trial data was returned
             %% Process NIDAQ session
             processPhotometryAcq(currentTrial);
             %% online plotting
+            processPhotometryOnline(currentTrial);
             updatePhotometryPlot(startX)            
             %% collect and save data
             BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
@@ -367,13 +373,16 @@ function CuedOutcome_odor_complete
                     lickHistPlot.zeroField{i}, lickHistPlot.startField{i}, lickHistPlot.endField{i}, linecolors(i), [], gca);
             end
             %% update photometry rasters, just do channel 1 for now...
-            phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF(:,bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(1), nidaq.sample_rate, 0):bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), nidaq.sample_rate, 0))));
-            phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF(:,bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(1), nidaq.sample_rate, 0):bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), nidaq.sample_rate, 0))));            
+            displaySampleRate = nidaq.sample_rate / nidaq.online.decimationFactor;
+            x1 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(1), displaySampleRate, 0);
+            x2 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), displaySampleRate, 0);
+            phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));
+            phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));            
             types = BpodSystem.ProtocolFigures.phRaster.types;
             lookupFactor = 4;
             for i = 1:length(types)
                 ax = BpodSystem.ProtocolFigures.phRaster.ax(i);
-                trials = onlineFilterTrials(types(i));
+                trials = onlineFilterTrials(types(i),[],[]);
                 image(BpodSystem.PluginObjects.Photometry.trialDFF{1}(trials, :), 'CDataMapping', 'Scaled', 'Parent', ax);
                 set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
             end

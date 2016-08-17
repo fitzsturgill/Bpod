@@ -8,9 +8,9 @@ function processPhotometryOnline(currentTrial)
 
     
     global BpodSystem nidaq    
-    baselinePeriod = BpodSystem.Photomtery.baselinePeriod;
-    blStartP = bpX2pnt(baselinePeriod(1), nidaq.sample_rate);
-    blEndP = bpX2pnt(baselinePeriod(2), nidaq.sample_rate);
+    baselinePeriod = BpodSystem.PluginObjects.Photometry.baselinePeriod;
+    blStartP = bpX2pnt(baselinePeriod(1), nidaq.sample_rate/nidaq.online.decimationFactor);
+    blEndP = bpX2pnt(baselinePeriod(2), nidaq.sample_rate/nidaq.online.decimationFactor);
     
     trialBaselines = zeros(1,2);
     for ch = 1:2 % 2 channels are hard coded
