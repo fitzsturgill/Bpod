@@ -217,6 +217,34 @@ function SO_RewardPunish_odor
     lickPlot.Outcomes{1} =  [1];
     lickPlot.Outcomes{2} = [1];
 
+    %%  Initialize photometry session analysis plots    
+    BpodSystem.PluginObjects.Photometry.blF = []; %[nTrials, nDemodChannels]
+    BpodSystem.PluginObjects.Photometry.baselinePeriod = [1 S.PreCsRecording];
+    BpodSystem.PluginObjects.Photometry.trialDFF = {}; % 1 x nDemodChannels cell array, fill with nTrials x nSamples dFF matrix for now to make it easy to pull out raster data
+    if S.GUI.PunishOn
+        BpodSystem.ProtocolFigures.phRaster.types = {1, 2, 3, 4, 5, 6, 7};
+    else
+        BpodSystem.ProtocolFigures.phRaster.types = {1, 2, 5, 7};
+    end
+    
+    if S.GUI.LED1_amp > 0
+        BpodSystem.ProtocolFigures.phRaster.fig_ch1 = ensureFigure('phRaster_ch1', 1);
+        BpodSystem.ProtocolFigures.phRaster.ax_ch1 = zeros(1, length(BpodSystem.ProtocolFigures.phRaster.types));
+        for i = 1:length(BpodSystem.ProtocolFigures.phRaster.types)
+            BpodSystem.ProtocolFigures.phRaster.ax_ch1(i) = subplot(1, length(BpodSystem.ProtocolFigures.phRaster.types), i);
+            set(gca, 'YDir', 'Reverse');
+            title(['Type: ' num2str(BpodSystem.ProtocolFigures.phRaster.types{i})]);
+        end
+    end
+    if S.GUI.LED2_amp > 0
+        BpodSystem.ProtocolFigures.phRaster.fig_ch2 = ensureFigure('phRaster', 1);
+        BpodSystem.ProtocolFigures.phRaster.ax_ch2 = zeros(1, length(BpodSystem.ProtocolFigures.phRaster.types));
+        for i = 1:length(BpodSystem.ProtocolFigures.phRaster.types)
+            BpodSystem.ProtocolFigures.phRaster.ax_ch2(i) = subplot(1, length(BpodSystem.ProtocolFigures.phRaster.types), i);
+            set(gca, 'YDir', 'Reverse');
+        end
+    end
+    
 
 
 
@@ -323,6 +351,7 @@ function SO_RewardPunish_odor
             %% Process NIDAQ session
             processPhotometryAcq(currentTrial);
             %% online plotting
+            processPhotometryOnline(currentTrial);            
             updatePhotometryPlot(startX)       
             %% collect and save data
             BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
@@ -338,13 +367,32 @@ function SO_RewardPunish_odor
             end
            
             if UsOutcomes(currentTrial) == 1
-                TotalRewardDisplay('add', S.GUI.Reward); % fix this, it's wrong
+                TotalRewardDisplay('add', S.GUI.Reward); %
             end
             bpLickRaster(BpodSystem.Data, lickPlot.Types{1}, lickPlot.Outcomes{1}, 'DeliverStimulus', [], lickPlot.Ax(1));
             set(gca, 'XLim', [-3, 6]);
             bpLickRaster(BpodSystem.Data, lickPlot.Types{2}, lickPlot.Outcomes{2}, 'DeliverStimulus', [], lickPlot.Ax(2));            
-            set(gca, 'XLim', [-3, 6]);            
-            %save data
+            set(gca, 'XLim', [-3, 6]);       
+            %% update photometry rasters
+            displaySampleRate = nidaq.sample_rate / nidaq.online.decimationFactor;
+            x1 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(1), displaySampleRate, 0);
+            x2 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), displaySampleRate, 0);
+            phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));
+            phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));            
+            types = BpodSystem.ProtocolFigures.phRaster.types;
+            lookupFactor = S.GUI.phRasterScaling;
+            for i = 1:length(types)
+                ax = BpodSystem.ProtocolFigures.phRaster.ax(i);
+                trials = onlineFilterTrials(types{i},[],[]);
+                nidaq.online.trialXData
+                CData = BpodSystem.PluginObjects.Photometry.trialDFF{1}(trials, :);
+                image('XData', [min(nidaq.online.trialXData) max(nidaq.online.trialXData)],...
+                    'YData', [1 size(CData, 1)],...
+                    'CData', 'CDataMapping', 'Scaled', 'Parent', ax);
+                set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
+            end
+                        
+            %% save data
             SaveBpodSessionData; % Saves the field BpodSystem.Data to the current data file
         else
             disp('WTF');
