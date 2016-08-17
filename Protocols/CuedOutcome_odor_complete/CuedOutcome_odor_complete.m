@@ -46,6 +46,7 @@ function CuedOutcome_odor_complete
         S.GUI.OdorTime = 1; % 0.5s tone, 1s delay        
         S.GUI.Delay = 1; %  time after odor and before US delivery (or omission)
         S.GUI.PunishOn = 1;
+        S.GUI.phRasterScaling = 4;        
         
         S.NoLick = 0; % forget the nolick
         S.ITI = []; %ITI duration is set to be exponentially distributed later
@@ -189,15 +190,27 @@ function CuedOutcome_odor_complete
     BpodSystem.PluginObjects.Photometry.baselinePeriod = [1 S.PreCsRecording];
     BpodSystem.PluginObjects.Photometry.trialDFF = {}; % 1 x nDemodChannels cell array, fill with nTrials x nSamples dFF matrix for now to make it easy to pull out raster data
     if S.GUI.PunishOn
-        BpodSystem.ProtocolFigures.phRaster.types = 1:9;
+        BpodSystem.ProtocolFigures.phRaster.types = {1, 2, 3, 4, 5, 6, 7, 8, 9};
     else
-        BpodSystem.ProtocolFigures.phRaster.types = [1 3 7 9];
+        BpodSystem.ProtocolFigures.phRaster.types = {1, 3, 7, 9};
     end
-    BpodSystem.ProtocolFigures.phRaster.fig = ensureFigure('phRaster', 1);
-    BpodSystem.ProtocolFigures.phRaster.ax = zeros(1, length(BpodSystem.ProtocolFigures.phRaster.types));
-    for i = 1:length(BpodSystem.ProtocolFigures.phRaster.types)
-        BpodSystem.ProtocolFigures.phRaster.ax(i) = subplot(1, length(BpodSystem.ProtocolFigures.phRaster.types), i);
-        set(gca, 'YDir', 'Reverse', 'Visible', 'off');
+    
+    if S.GUI.LED1_amp > 0
+        BpodSystem.ProtocolFigures.phRaster.fig_ch1 = ensureFigure('phRaster_ch1', 1);
+        BpodSystem.ProtocolFigures.phRaster.ax_ch1 = zeros(1, length(BpodSystem.ProtocolFigures.phRaster.types));
+        for i = 1:length(BpodSystem.ProtocolFigures.phRaster.types)
+            BpodSystem.ProtocolFigures.phRaster.ax_ch1(i) = subplot(1, length(BpodSystem.ProtocolFigures.phRaster.types), i);
+            set(gca, 'YDir', 'Reverse');
+            title(['Type: ' num2str(BpodSystem.ProtocolFigures.phRaster.types{i})]);
+        end
+    end
+    if S.GUI.LED2_amp > 0
+        BpodSystem.ProtocolFigures.phRaster.fig_ch2 = ensureFigure('phRaster', 1);
+        BpodSystem.ProtocolFigures.phRaster.ax_ch2 = zeros(1, length(BpodSystem.ProtocolFigures.phRaster.types));
+        for i = 1:length(BpodSystem.ProtocolFigures.phRaster.types)
+            BpodSystem.ProtocolFigures.phRaster.ax_ch2(i) = subplot(1, length(BpodSystem.ProtocolFigures.phRaster.types), i);
+            set(gca, 'YDir', 'Reverse');
+        end
     end
     
     %% Main trial loop
@@ -266,6 +279,17 @@ function CuedOutcome_odor_complete
         end    
         
         % update outcome plot to reflect currently executed trial
+        trialSpan = 10;
+        trialsBack = currentTrial - max(1, currentTrial - trialSpan);
+        if trialsBack % greater than 0
+            YData = [BpodSystem.Data.TrialTypes((currentTrial - trialsBack + 1):end) TrialType]; % add current trial type prior to sending state matrix and processing
+            XData = (currentTrial - trialsBack + 1):currentTrial;
+        else % it's the first trial
+            YData = TrialType;
+            XData = 1;
+        end
+        outcomesHandle.XData = XData;
+        outcomesHandle.YData = YData;
         set(outcomeAxes, 'XLim', [max(0, currentTrial - outcomeSpan), currentTrial]);
 %         set(placeHolder, 'XData', [currentTrial currentTrial]);   
         
@@ -332,13 +356,10 @@ function CuedOutcome_odor_complete
 
         %% Run state matrix
         RawEvents = RunStateMatrix();  % Blocking!
-
-        pause(0.05); % wait for hardware to stop, see error message below, I think this addresses the below error message:
-    %     Error using processNidaqData (line 15)
-    % Internal Error: The hardware did not report that it stopped before the timeout elapsed.
-        nidaq.session.stop(); % Kills ~0.002 seconds after state matrix is done.
-        wait(nidaq.session);
-        nidaq.session.outputSingleScan([0 0]); % make sure LEDs are turned off
+        
+        %% Stop Photometry session
+        stopPhotometryAcq;
+        
         if ~isempty(fieldnames(RawEvents)) % If trial data was returned
             %% Process NIDAQ session
             processPhotometryAcq(currentTrial);
@@ -379,11 +400,15 @@ function CuedOutcome_odor_complete
             phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));
             phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));            
             types = BpodSystem.ProtocolFigures.phRaster.types;
-            lookupFactor = 4;
+            lookupFactor = S.GUI.phRasterScaling;
             for i = 1:length(types)
                 ax = BpodSystem.ProtocolFigures.phRaster.ax(i);
-                trials = onlineFilterTrials(types(i),[],[]);
-                image(BpodSystem.PluginObjects.Photometry.trialDFF{1}(trials, :), 'CDataMapping', 'Scaled', 'Parent', ax);
+                trials = onlineFilterTrials(types{i},[],[]);
+                nidaq.online.trialXData
+                CData = BpodSystem.PluginObjects.Photometry.trialDFF{1}(trials, :);
+                image('XData', [min(nidaq.online.trialXData) max(nidaq.online.trialXData)],...
+                    'YData', [1 size(CData, 1)],...
+                    'CData', 'CDataMapping', 'Scaled', 'Parent', ax);
                 set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
             end
             
