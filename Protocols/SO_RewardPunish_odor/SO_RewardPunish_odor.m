@@ -380,7 +380,8 @@ function SO_RewardPunish_odor
             phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));
             phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));            
             types = BpodSystem.ProtocolFigures.phRaster.types;
-            lookupFactor = S.GUI.phRasterScaling;
+%             lookupFactor = S.GUI.phRasterScaling;
+            lookupFactor = 4;
             for i = 1:length(types)
                 ax = BpodSystem.ProtocolFigures.phRaster.ax(i);
                 trials = onlineFilterTrials(types{i},[],[]);
