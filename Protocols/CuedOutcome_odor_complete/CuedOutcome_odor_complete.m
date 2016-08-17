@@ -46,7 +46,7 @@ function CuedOutcome_odor_complete
         S.GUI.OdorTime = 1; % 0.5s tone, 1s delay        
         S.GUI.Delay = 1; %  time after odor and before US delivery (or omission)
         S.GUI.PunishOn = 1;
-        S.GUI.phRasterScaling = 4;        
+%         S.GUI.phRasterScaling = 4;        
         
         S.NoLick = 0; % forget the nolick
         S.ITI = []; %ITI duration is set to be exponentially distributed later
@@ -290,8 +290,9 @@ function CuedOutcome_odor_complete
         end
         outcomesHandle.XData = XData;
         outcomesHandle.YData = YData;
-        set(outcomeAxes, 'XLim', [max(0, currentTrial - outcomeSpan), currentTrial]);
+%         set(outcomeAxes, 'XLim', [max(0, currentTrial - outcomeSpan), currentTrial]);
 %         set(placeHolder, 'XData', [currentTrial currentTrial]);   
+        set(outcomeAxes, 'YLim', [0 10], 'YGrid', 'on');
         
         % update odor valve number for current trial
         slaveResponse = updateValveSlave(valveSlave, OdorValve); 
@@ -396,20 +397,36 @@ function CuedOutcome_odor_complete
             %% update photometry rasters, just do channel 1 for now...
             displaySampleRate = nidaq.sample_rate / nidaq.online.decimationFactor;
             x1 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(1), displaySampleRate, 0);
-            x2 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), displaySampleRate, 0);
-            phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));
-            phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));            
+            x2 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), displaySampleRate, 0);        
             types = BpodSystem.ProtocolFigures.phRaster.types;
-            lookupFactor = S.GUI.phRasterScaling;
+%             lookupFactor = S.GUI.phRasterScaling;
+            lookupFactor = 4;
+            xData = [min(nidaq.online.trialXData) max(nidaq.online.trialXData)] + startX;
             for i = 1:length(types)
-                ax = BpodSystem.ProtocolFigures.phRaster.ax(i);
-                trials = onlineFilterTrials(types{i},[],[]);
-                nidaq.online.trialXData
-                CData = BpodSystem.PluginObjects.Photometry.trialDFF{1}(trials, :);
-                image('XData', [min(nidaq.online.trialXData) max(nidaq.online.trialXData)],...
-                    'YData', [1 size(CData, 1)],...
-                    'CData', 'CDataMapping', 'Scaled', 'Parent', ax);
-                set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
+                if S.GUI.LED1_amp > 0
+                    phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));
+                    phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));    
+                    ax = BpodSystem.ProtocolFigures.phRaster.ax_ch1(i);
+                    trials = onlineFilterTrials(types{i},[],[]);
+                    nidaq.online.trialXData
+                    CData = BpodSystem.PluginObjects.Photometry.trialDFF{1}(trials, :);
+                    image('XData', xData,...
+                        'YData', [1 size(CData, 1)],...
+                        'CData', CData, 'CDataMapping', 'Scaled', 'Parent', ax);
+                    set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
+                end
+                if S.GUI.LED2_amp > 0
+                    phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{2}(:,x1:x2)));
+                    phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{2}(:,x1:x2)));    
+                    ax = BpodSystem.ProtocolFigures.phRaster.ax_ch2(i);
+                    trials = onlineFilterTrials(types{i},[],[]);
+                    nidaq.online.trialXData
+                    CData = BpodSystem.PluginObjects.Photometry.trialDFF{2}(trials, :);
+                    image('XData', xData,...
+                        'YData', [1 size(CData, 1)],...
+                        'CData', CData, 'CDataMapping', 'Scaled', 'Parent', ax);
+                    set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
+                end                
             end
             
             %% save data
