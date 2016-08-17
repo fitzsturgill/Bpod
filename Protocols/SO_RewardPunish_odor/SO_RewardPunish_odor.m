@@ -346,6 +346,9 @@ function SO_RewardPunish_odor
 
         %% Run state matrix
         RawEvents = RunStateMatrix();  % Blocking!
+
+        %% Stop Photometry session
+        stopPhotometryAcq;
         
         if ~isempty(fieldnames(RawEvents)) % If trial data was returned
             %% Process NIDAQ session
