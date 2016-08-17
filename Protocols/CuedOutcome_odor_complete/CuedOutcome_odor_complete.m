@@ -394,7 +394,7 @@ function CuedOutcome_odor_complete
                 bpLickHist(BpodSystem.Data, lickHistPlot.Types(i), lickHistPlot.Outcomes(i), lickHistPlot.binSpecs{i},...
                     lickHistPlot.zeroField{i}, lickHistPlot.startField{i}, lickHistPlot.endField{i}, linecolors(i), [], gca);
             end
-            %% update photometry rasters, just do channel 1 for now...
+            %% update photometry rasters
             displaySampleRate = nidaq.sample_rate / nidaq.online.decimationFactor;
             x1 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(1), displaySampleRate, 0);
             x2 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), displaySampleRate, 0);        
