@@ -56,7 +56,7 @@ function CuedOutcome_odor_complete
         S.RewardValveTime =  GetValveTimes(S.GUI.Reward, S.RewardValveCode);
 
         % state durations in behavioral protocol
-        S.PreCsRecording  = 3; % After ITI        was 3
+        S.PreCsRecording  = 4; % After ITI        was 3
         S.PostUsRecording = 4; % After trial before exit    was 5
 
         S.ToneFreq = 10000; % frequency of neutral tone signaling onset of U.S.
