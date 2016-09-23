@@ -50,8 +50,8 @@ function CuedOutcome_odor_complete
         
         S.NoLick = 0; % forget the nolick
         S.ITI = []; %ITI duration is set to be exponentially distributed later
-        S.RewardValveCode = 1;
-        S.PunishValveCode = 2;
+        S.RewardValveCode = 1; % why do I have these? 
+        S.PunishValveCode = 2; % seems uncessary (redundant and currently incorrect)
         S.currentValve = []; % holds odor valve # for current trial
         S.RewardValveTime =  GetValveTimes(S.GUI.Reward, S.RewardValveCode);
 
