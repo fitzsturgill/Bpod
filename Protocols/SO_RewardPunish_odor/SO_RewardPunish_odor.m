@@ -231,16 +231,16 @@ function SO_RewardPunish_odor
         BpodSystem.ProtocolFigures.phRaster.fig_ch1 = ensureFigure('phRaster_ch1', 1);
         BpodSystem.ProtocolFigures.phRaster.ax_ch1 = zeros(1, length(BpodSystem.ProtocolFigures.phRaster.types));
         for i = 1:length(BpodSystem.ProtocolFigures.phRaster.types)
-            BpodSystem.ProtocolFigures.phRaster.ax_ch1(i) = subplot(1, length(BpodSystem.ProtocolFigures.phRaster.types), i);
+            BpodSystem.ProtocolFigures.phRaster.ax_ch1(i) = subplot(2, ceil(length(BpodSystem.ProtocolFigures.phRaster.types)/2), i);
             set(gca, 'YDir', 'Reverse');
             title(['Type: ' num2str(BpodSystem.ProtocolFigures.phRaster.types{i})]);
         end
     end
     if S.GUI.LED2_amp > 0
-        BpodSystem.ProtocolFigures.phRaster.fig_ch2 = ensureFigure('phRaster', 1);
+        BpodSystem.ProtocolFigures.phRaster.fig_ch2 = ensureFigure('phRaster_ch2', 1);
         BpodSystem.ProtocolFigures.phRaster.ax_ch2 = zeros(1, length(BpodSystem.ProtocolFigures.phRaster.types));
         for i = 1:length(BpodSystem.ProtocolFigures.phRaster.types)
-            BpodSystem.ProtocolFigures.phRaster.ax_ch2(i) = subplot(1, length(BpodSystem.ProtocolFigures.phRaster.types), i);
+            BpodSystem.ProtocolFigures.phRaster.ax_ch2(i) = subplot(2, ceil(length(BpodSystem.ProtocolFigures.phRaster.types)/2), i);
             set(gca, 'YDir', 'Reverse');
         end
     end
