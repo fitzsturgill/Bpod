@@ -56,7 +56,7 @@ function CuedOutcome_odor_complete
         S.RewardValveTime =  GetValveTimes(S.GUI.Reward, S.RewardValveCode);
 
         % state durations in behavioral protocol
-        S.PreCsRecording  = 3; % After ITI        was 3
+        S.PreCsRecording  = 4; % After ITI        was 3
         S.PostUsRecording = 4; % After trial before exit    was 5
 
         S.ToneFreq = 10000; % frequency of neutral tone signaling onset of U.S.
@@ -199,7 +199,7 @@ function CuedOutcome_odor_complete
         BpodSystem.ProtocolFigures.phRaster.fig_ch1 = ensureFigure('phRaster_ch1', 1);
         BpodSystem.ProtocolFigures.phRaster.ax_ch1 = zeros(1, length(BpodSystem.ProtocolFigures.phRaster.types));
         for i = 1:length(BpodSystem.ProtocolFigures.phRaster.types)
-            BpodSystem.ProtocolFigures.phRaster.ax_ch1(i) = subplot(1, length(BpodSystem.ProtocolFigures.phRaster.types), i);
+            BpodSystem.ProtocolFigures.phRaster.ax_ch1(i) = subplot(2, ceil(length(BpodSystem.ProtocolFigures.phRaster.types)/2), i);
             set(gca, 'YDir', 'Reverse');
             title(['Type: ' num2str(BpodSystem.ProtocolFigures.phRaster.types{i})]);
         end
@@ -208,7 +208,7 @@ function CuedOutcome_odor_complete
         BpodSystem.ProtocolFigures.phRaster.fig_ch2 = ensureFigure('phRaster', 1);
         BpodSystem.ProtocolFigures.phRaster.ax_ch2 = zeros(1, length(BpodSystem.ProtocolFigures.phRaster.types));
         for i = 1:length(BpodSystem.ProtocolFigures.phRaster.types)
-            BpodSystem.ProtocolFigures.phRaster.ax_ch2(i) = subplot(1, length(BpodSystem.ProtocolFigures.phRaster.types), i);
+            BpodSystem.ProtocolFigures.phRaster.ax_ch2(i) = subplot(2, ceil(length(BpodSystem.ProtocolFigures.phRaster.types)/2), i);
             set(gca, 'YDir', 'Reverse');
         end
     end
