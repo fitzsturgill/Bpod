@@ -365,8 +365,10 @@ function CuedOutcome_odor_complete
             %% Process NIDAQ session
             processPhotometryAcq(currentTrial);
             %% online plotting
-            processPhotometryOnline(currentTrial);
-            updatePhotometryPlot(startX)            
+            try
+                processPhotometryOnline(currentTrial);
+                updatePhotometryPlot(startX)    
+            end
             %% collect and save data
             BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
             BpodSystem.Data.TrialSettings(currentTrial) = S; % Adds the settings used for the current trial to the Data struct (to be saved after the trial ends)
@@ -395,38 +397,40 @@ function CuedOutcome_odor_complete
                     lickHistPlot.zeroField{i}, lickHistPlot.startField{i}, lickHistPlot.endField{i}, linecolors(i), [], gca);
             end
             %% update photometry rasters
-            displaySampleRate = nidaq.sample_rate / nidaq.online.decimationFactor;
-            x1 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(1), displaySampleRate, 0);
-            x2 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), displaySampleRate, 0);        
-            types = BpodSystem.ProtocolFigures.phRaster.types;
-%             lookupFactor = S.GUI.phRasterScaling;
-            lookupFactor = 4;
-            xData = [min(nidaq.online.trialXData) max(nidaq.online.trialXData)] + startX;
-            for i = 1:length(types)
-                if S.GUI.LED1_amp > 0
-                    phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));
-                    phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));    
-                    ax = BpodSystem.ProtocolFigures.phRaster.ax_ch1(i);
-                    trials = onlineFilterTrials(types{i},[],[]);
-                    nidaq.online.trialXData
-                    CData = BpodSystem.PluginObjects.Photometry.trialDFF{1}(trials, :);
-                    image('XData', xData,...
-                        'YData', [1 size(CData, 1)],...
-                        'CData', CData, 'CDataMapping', 'Scaled', 'Parent', ax);
-                    set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
+            try
+                displaySampleRate = nidaq.sample_rate / nidaq.online.decimationFactor;
+                x1 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(1), displaySampleRate, 0);
+                x2 = bpX2pnt(BpodSystem.PluginObjects.Photometry.baselinePeriod(2), displaySampleRate, 0);        
+                types = BpodSystem.ProtocolFigures.phRaster.types;
+    %             lookupFactor = S.GUI.phRasterScaling;
+                lookupFactor = 4;
+                xData = [min(nidaq.online.trialXData) max(nidaq.online.trialXData)] + startX;
+                for i = 1:length(types)
+                    if S.GUI.LED1_amp > 0
+                        phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));
+                        phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{1}(:,x1:x2)));    
+                        ax = BpodSystem.ProtocolFigures.phRaster.ax_ch1(i);
+                        trials = onlineFilterTrials(types{i},[],[]);
+                        nidaq.online.trialXData
+                        CData = BpodSystem.PluginObjects.Photometry.trialDFF{1}(trials, :);
+                        image('XData', xData,...
+                            'YData', [1 size(CData, 1)],...
+                            'CData', CData, 'CDataMapping', 'Scaled', 'Parent', ax);
+                        set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
+                    end
+                    if S.GUI.LED2_amp > 0
+                        phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{2}(:,x1:x2)));
+                        phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{2}(:,x1:x2)));    
+                        ax = BpodSystem.ProtocolFigures.phRaster.ax_ch2(i);
+                        trials = onlineFilterTrials(types{i},[],[]);
+                        nidaq.online.trialXData
+                        CData = BpodSystem.PluginObjects.Photometry.trialDFF{2}(trials, :);
+                        image('XData', xData,...
+                            'YData', [1 size(CData, 1)],...
+                            'CData', CData, 'CDataMapping', 'Scaled', 'Parent', ax);
+                        set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
+                    end                
                 end
-                if S.GUI.LED2_amp > 0
-                    phMean = mean(mean(BpodSystem.PluginObjects.Photometry.trialDFF{2}(:,x1:x2)));
-                    phStd = mean(std(BpodSystem.PluginObjects.Photometry.trialDFF{2}(:,x1:x2)));    
-                    ax = BpodSystem.ProtocolFigures.phRaster.ax_ch2(i);
-                    trials = onlineFilterTrials(types{i},[],[]);
-                    nidaq.online.trialXData
-                    CData = BpodSystem.PluginObjects.Photometry.trialDFF{2}(trials, :);
-                    image('XData', xData,...
-                        'YData', [1 size(CData, 1)],...
-                        'CData', CData, 'CDataMapping', 'Scaled', 'Parent', ax);
-                    set(ax, 'CLim', [phMean - lookupFactor * phStd, phMean + lookupFactor * phStd]);
-                end                
             end
             
             %% save data
@@ -442,3 +446,31 @@ function CuedOutcome_odor_complete
         end 
     end
 end
+
+% Index exceeds matrix dimensions.
+% 
+% Error in phDemodOnline (line 10)
+%         nidaq.online.currentDemodData{1} = phDemod(nidaq.ai_data(:,1), nidaq.ao_data(:,1),
+%         nidaq.sample_rate, LED1_f, lowCutoff);
+% 
+% Error in processPhotometryOnline (line 7)
+%     phDemodOnline(currentTrial);
+% 
+% Error in CuedOutcome_odor_complete (line 368)
+%             processPhotometryOnline(currentTrial);
+% 
+% Error in run (line 96)
+% evalin('caller', [script ';']);
+% 
+% Error in LaunchManager>pushbutton1_Callback (line 300)
+%         run(ProtocolPath);
+% 
+% Error in gui_mainfcn (line 95)
+%         feval(varargin{:});
+% 
+% Error in LaunchManager (line 61)
+%     gui_mainfcn(gui_State, varargin{:});
+% 
+% Error in
+% matlab.graphics.internal.figfile.FigFile/read>@(hObject,eventdata)LaunchManager('pushbutton1_Callback',hObject,eventdata,guidata(hObject)) 
+% Error while evaluating DestroyedObject Callback
