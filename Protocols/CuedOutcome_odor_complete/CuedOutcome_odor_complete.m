@@ -367,7 +367,7 @@ function CuedOutcome_odor_complete
             %% online plotting
             try
                 processPhotometryOnline(currentTrial);
-                updatePhotometryPlot(startX)    
+                updatePhotometryPlot(startX);    
             end
             %% collect and save data
             BpodSystem.Data = AddTrialEvents(BpodSystem.Data,RawEvents); % Computes trial events from raw data
